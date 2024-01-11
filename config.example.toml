@@ -1,0 +1,38 @@
+
+debug = false
+
+[discord]
+
+# Visit the Discord Developer Portal to acquire client credentials for your application.
+
+client_id = "my discord client id"
+client_secret = "DO NOT COMMIT TO VERSION CONTROL"
+
+[postgres]
+
+host = "localhost"
+port = 5432
+
+username = "bureaucrat"
+password = "DO NOT COMMIT TO VERSION CONTROL"
+database = "bureaucrat"
+
+[redis]
+
+host = "localhost"
+port = 6379
+
+username = "bureaucrat"
+password = "DO NOT COMMIT TO VERSION CONTROL"
+database = "bureaucrat"
+
+[server]
+
+name = "Bureaucrat"
+
+host = "127.0.0.1"
+port = 3001
+
+use_tls = true
+tls_pem = "tls/cert.pem"
+tls_key = "tls/cert.rsa"
