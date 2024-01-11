@@ -1,9 +1,7 @@
-
 mod api;
 mod app;
 
 use warp::{http::Uri, Filter, Rejection, Reply};
-
 
 /**
  Returns Bureaucrat's routes.

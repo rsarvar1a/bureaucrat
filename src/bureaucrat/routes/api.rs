@@ -1,8 +1,6 @@
-
 use warp::{Filter, Rejection, Reply};
 
 use crate::bureaucrat::{Configuration, Services};
-
 
 /**
     Returns the filter for Bureaucrat's API, which is mounted at /api.

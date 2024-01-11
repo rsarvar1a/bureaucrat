@@ -1,4 +1,3 @@
-
 mod auth;
 pub mod configuration;
 mod routes;
