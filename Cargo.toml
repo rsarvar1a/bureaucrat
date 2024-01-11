@@ -9,10 +9,15 @@ edition = "2021"
 anyhow = "1.0.79"
 clap = { version = "4.4.14", features = ["derive"] }
 config = "0.13.4"
+deadpool-postgres = "0.12.1"
+deadpool-redis = "0.14.0"
+derivative = "2.2.0"
 env_logger = "0.10.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
+redis = { version = "0.24.0", features = ["aio", "tokio-comp"] }
 serde = { version = "1.0.195", features = ["derive"] }
 static_dir = "0.2.0"
 tokio = { version = "1.35.1", features = ["rt-multi-thread", "full"] }
+tokio-postgres = "0.7.10"
 warp = { version = "0.3.6", features = ["tls"] }

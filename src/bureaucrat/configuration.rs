@@ -1,4 +1,5 @@
 use anyhow::{Context, Error, Result};
+use derivative::Derivative;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
@@ -14,14 +15,19 @@ pub struct DiscordConfiguration
 }
 
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Derivative, Deserialize)]
+#[derivative(Default)]
 pub struct PostgresConfiguration
 {
+    #[derivative(Default(value="\"localhost\".to_owned()"))]
     pub host: String,
+
+    #[derivative(Default(value="\"5432\".to_owned()"))]
     pub port: String,
+
     pub username: String,
     pub password: String,
-    pub database: String
+    pub database: String,
 }
 
 impl PostgresConfiguration
@@ -55,9 +61,58 @@ impl PostgresConfiguration
 }
 
 
+#[derive(Clone, Debug, Derivative, Deserialize)]
+#[derivative(Default)]
+pub struct RedisConfiguration
+{
+    #[derivative(Default(value="\"localhost\".to_owned()"))]
+    pub host: String,
+
+    #[derivative(Default(value="\"6379\".to_owned()"))]
+    pub port: String,
+
+    pub username: String,
+    pub password: String,
+    pub database: String,
+    
+    pub max_connections: usize
+}
+
+impl RedisConfiguration
+{
+    /**
+     Returns the Postgres schema URL to the database. 
+    */
+    pub fn as_url(& self) -> String
+    {
+        static SCHEMA : &str = "redis://";
+
+        let location = format!(
+            "{schema}{user}{auth_separator}{pass}{at_sign}{host}{port_separator}{port}",
+            schema = SCHEMA,
+            user = self.username,
+            pass = self.password, 
+            host = self.host, 
+            port = self.port, 
+            auth_separator = match self.password.as_str() { "" => "", _ => ":" },
+            at_sign = match self.username.as_str() { "" => "", _ => "@" },
+            port_separator = match self.port.as_str() { "" => "", _ => ":" }
+        );
+
+        format!(
+            "{location}{database_separator}{database}",
+            location = location,
+            database = self.database,
+            database_separator = match self.database.as_str() == "" || location.as_str() == SCHEMA { true => "", false => "/" }
+        )
+    }
+}
+
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct ServerConfiguration
 {
+    pub name: String,
     pub host: String,
     pub port: usize,
     pub use_tls: bool,
@@ -71,6 +126,7 @@ impl Default for ServerConfiguration
     {
         ServerConfiguration 
         {  
+            name: "Bureaucrat".to_owned(),
             host: "127.0.0.1".to_owned(),
             port: 3001,
             use_tls: false,
@@ -89,28 +145,18 @@ impl ServerConfiguration
 }
 
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Derivative, Deserialize)]
+#[derivative(Default)]
 #[serde(default)]
 pub struct Configuration
 {
+    #[derivative(Default(value="false"))]
     pub debug: bool,
+    
     pub discord: DiscordConfiguration,
     pub postgres: PostgresConfiguration,
+    pub redis: RedisConfiguration,
     pub server: ServerConfiguration
-}
-
-impl Default for Configuration
-{
-    fn default() -> Self 
-    {
-        Configuration 
-        {
-            debug: false,
-            discord: DiscordConfiguration::default(),
-            postgres: PostgresConfiguration::default(),
-            server: ServerConfiguration::default()
-        }
-    }
 }
 
 impl Configuration

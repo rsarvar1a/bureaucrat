@@ -15,7 +15,7 @@ pub fn get_routes() -> impl Filter<Extract = impl Reply, Error = Rejection> + Cl
         .allow_methods(vec!["GET", "POST", "HEAD"])
         .allow_headers(vec!["Content-Type"])
         .build();
-    
+
     // Redirect the root to the app, but 404 on anything else, I guess?
 
     warp::path::end()
