@@ -5,14 +5,13 @@ debug = false
 
 # Visit the Discord Developer Portal to acquire client credentials for your application.
 
-client_id = "my discord client id"
-client_secret = "DO NOT COMMIT TO VERSION CONTROL"
+token = "DO NOT COMMIT TO VERSION CONTROL"
+prefix = ">"
 
 [postgres]
 
 host = "localhost"
 port = 5432
-
 username = "bureaucrat"
 password = "DO NOT COMMIT TO VERSION CONTROL"
 database = "bureaucrat"
@@ -21,18 +20,16 @@ database = "bureaucrat"
 
 host = "localhost"
 port = 6379
-
 username = "bureaucrat"
 password = "DO NOT COMMIT TO VERSION CONTROL"
 database = "bureaucrat"
+max_connections = 8
 
 [server]
 
 name = "Bureaucrat"
-
 host = "127.0.0.1"
 port = 3001
-
 use_tls = true
 tls_pem = "tls/cert.pem"
 tls_key = "tls/cert.rsa"

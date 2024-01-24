@@ -6,15 +6,20 @@ use serde::Deserialize;
 use std::default::Default;
 use std::sync::RwLock;
 
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Derivative, Deserialize)]
+#[derivative(Default)]
+#[serde(default)]
 pub struct DiscordConfiguration
 {
-    pub client_id: String,
-    pub client_secret: String,
+    pub token: String,
+
+    #[derivative(Default(value = "\">\".to_owned()"))]
+    pub prefix: String,
 }
 
 #[derive(Clone, Debug, Derivative, Deserialize)]
 #[derivative(Default)]
+#[serde(default)]
 pub struct PostgresConfiguration
 {
     #[derivative(Default(value = "\"localhost\".to_owned()"))]
@@ -76,6 +81,7 @@ impl PostgresConfiguration
 
 #[derive(Clone, Debug, Derivative, Deserialize)]
 #[derivative(Default)]
+#[serde(default)]
 pub struct RedisConfiguration
 {
     #[derivative(Default(value = "\"localhost\".to_owned()"))]
@@ -88,6 +94,7 @@ pub struct RedisConfiguration
     pub password: String,
     pub database: String,
 
+    #[derivative(Default(value = "10"))]
     pub max_connections: usize,
 }
 
@@ -138,6 +145,7 @@ impl RedisConfiguration
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(default)]
 pub struct ServerConfiguration
 {
     pub name: String,

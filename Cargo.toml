@@ -15,6 +15,7 @@ derivative = "2.2.0"
 env_logger = "0.10.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
+poise = "0.6.1"
 redis = { version = "0.24.0", features = ["aio", "tokio-comp"] }
 serde = { version = "1.0.195", features = ["derive"] }
 static_dir = "0.2.0"

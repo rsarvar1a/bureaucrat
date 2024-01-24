@@ -1,12 +1,13 @@
 mod api;
 mod app;
 
+use anyhow::{Error, Result};
 use warp::{http::Uri, Filter, Rejection, Reply};
 
 /**
  Returns Bureaucrat's routes.
 */
-pub fn get_routes() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone
+pub fn get_routes() -> Result<impl Filter<Extract = impl Reply, Error = Rejection> + Clone, Error>
 {
     let cors = warp::cors()
         .allow_any_origin()
@@ -16,9 +17,11 @@ pub fn get_routes() -> impl Filter<Extract = impl Reply, Error = Rejection> + Cl
 
     // Redirect the root to the app, but 404 on anything else, I guess?
 
-    warp::path::end()
+    let routes = warp::path::end()
         .map(|| warp::redirect::found(Uri::from_static("/app/")))
-        .or(api::get_routes())
-        .or(app::get_routes())
-        .with(cors)
+        .or(api::get_routes()?)
+        .or(app::get_routes()?)
+        .with(cors);
+
+    Ok(routes)
 }
