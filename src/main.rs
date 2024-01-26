@@ -50,6 +50,7 @@ async fn main() -> Result<(), Error>
     Ok(())
 }
 
+/// As an async task, constructs the Discord client and connects to the gateway.
 async fn discord_main() -> Result<(), Error>
 {
     // Instantiate the client and run it.
@@ -63,6 +64,7 @@ async fn discord_main() -> Result<(), Error>
     Ok(())
 }
 
+/// As an async task, runs the webserver. You can specify TLS mode in the \[server\] section of the config file.
 async fn server_main() -> Result<(), Error>
 {
     let config = Configuration::get();

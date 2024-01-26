@@ -1,9 +1,10 @@
 mod api;
-pub mod configuration;
 mod discord;
-mod models;
 mod routes;
-mod services;
+
+pub mod configuration;
+pub mod models;
+pub mod services;
 
 /* Required by main */
 

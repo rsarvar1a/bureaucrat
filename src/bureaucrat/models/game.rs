@@ -1,14 +1,12 @@
 use poise::serenity_prelude::model::id::{ChannelId, GuildId};
 use serde::{Deserialize, Serialize};
 
-/*
- Each game is tied to a unique channel, and only one game can run in a given channel.
-*/
+/// A primary key for a game of Clocktower. Each game 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct GameId
 {
-    guild: GuildId,
-    channel: ChannelId,
+    pub guild: GuildId,
+    pub channel: ChannelId,
 }
 
 pub struct Game
