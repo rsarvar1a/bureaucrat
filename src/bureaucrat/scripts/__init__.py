@@ -68,7 +68,7 @@ class Scripts(commands.GroupCog, group_name="script"):
         await ScriptListView.create(interaction=interaction, bot=self.bot, author=user_id, name=name, page_size=page_size, followup=False)
 
     @apc.command()
-    @apc.rename(attachment="script.json")
+    @apc.rename(attachment="script")
     @apc.describe(attachment="Attach a script.json file.")
     async def new(self, interaction: Interaction, attachment: Optional[Attachment]) -> None:
         """
