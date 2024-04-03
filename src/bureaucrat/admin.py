@@ -14,7 +14,7 @@ async def setup(bot):
     await bot.add_cog(Administrative(bot))
 
 
-class Administrative(commands.GroupCog, group_name="administrative"):
+class Administrative(commands.GroupCog, group_name="admin"):
 
     def __init__(self, bot: "Bureaucrat") -> None:
         super().__init__()

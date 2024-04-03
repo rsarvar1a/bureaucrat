@@ -17,13 +17,14 @@ async def setup(bot):
     await bot.add_cog(Scripts(bot))
 
 
-class Scripts(commands.GroupCog, group_name="scripts"):
+class Scripts(commands.GroupCog, group_name="script"):
 
     def __init__(self, bot: "Bureaucrat") -> None:
         super().__init__()
         self.bot = bot
 
     @apc.command()
+    @apc.describe(id="Enter the script's id.")
     @CONFIG.database.transaction()
     async def delete(self, interaction: Interaction, id: str) -> None:
         """
@@ -67,6 +68,8 @@ class Scripts(commands.GroupCog, group_name="scripts"):
         await ScriptListView.create(interaction=interaction, bot=self.bot, author=user_id, name=name, page_size=page_size, followup=False)
 
     @apc.command()
+    @apc.rename(attachment="script.json")
+    @apc.describe(attachment="Attach a script.json file.")
     async def new(self, interaction: Interaction, attachment: Optional[Attachment]) -> None:
         """
         Create a new script from a script.json file.
