@@ -52,6 +52,24 @@ class Administrative(commands.GroupCog, group_name="administrative"):
             ephemeral=True,
         )
 
+    @commands.command()
+    @commands.is_owner()
+    @commands.guild_only()
+    async def register_here(self, ctx: Context):
+        """
+        Register application commands in a specific server.
+        """
+        self.bot.tree.copy_global_to(guild=ctx.guild)
+        cmds = await self.bot.tree.sync(guild=ctx.guild)
+        await ctx.reply(
+            embed=embeds.make_embed(
+                self.bot,
+                title="Registration",
+                description=f"Synced {len(cmds)} commands into home guild {ctx.guild.name}.",
+            ),
+            ephemeral=True,
+        )
+
     @apc.command()
     async def list_extensions(self, interaction: Interaction):
         """

@@ -14,8 +14,8 @@ asyncpg = "^0.29.0"
 ormar = "^0.20.0"
 python-dotenv = "^1.0.1"
 aioboto3 = "^12.3.0"
-psycopg2 = "^2.9.9"
 alembic = "^1.13.1"
+psycopg2-binary = "^2.9.9"
 
 [tool.poetry.group.dev.dependencies]
 pylance = "^0.10.6"
