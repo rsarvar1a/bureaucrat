@@ -1,7 +1,7 @@
 from bureaucrat.models.configure import CONFIG, ormar
 from bureaucrat.models.scripts import Script, Document
 from bureaucrat.utility import embeds
-from discord import app_commands as apc, Interaction, Member
+from discord import app_commands as apc, Attachment, Interaction, Member
 from discord.ext import commands
 from typing import TYPE_CHECKING, Optional
 
@@ -67,8 +67,8 @@ class Scripts(commands.GroupCog, group_name="scripts"):
         await ScriptListView.create(interaction=interaction, bot=self.bot, author=user_id, name=name, page_size=page_size, followup=False)
 
     @apc.command()
-    async def new(self, interaction: Interaction) -> None:
+    async def new(self, interaction: Interaction, attachment: Optional[Attachment]) -> None:
         """
         Create a new script from a script.json file.
         """
-        await NewScriptView.create(interaction=interaction, bot=self.bot)
+        await NewScriptView.create(attachment=attachment, interaction=interaction, bot=self.bot)

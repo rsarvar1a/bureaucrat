@@ -7,14 +7,16 @@ from bureaucrat.models import CONFIG
 from bureaucrat.models.scripts import Script, Document
 from bureaucrat.utility import embeds
 from datetime import datetime
-from discord import ButtonStyle, Interaction, TextStyle, ui
+from discord import Attachment, ButtonStyle, Interaction, TextStyle, ui
 from functools import partial
+from io import BytesIO
 from pathlib import Path
 from scriptmaker import Datastore, Renderer, PDFTools
 from sqids import Sqids
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
+from urllib.request import urlretrieve
 
 from .details import ScriptDetailsView
 
@@ -76,21 +78,37 @@ class NewScriptModal(ui.Modal, title="Input your JSONs!"):
         self.parent = parent
         return self
 
-    async def on_submit(self, interaction: Interaction) -> None:
+    def handle_json_form(self) -> None:
         self.parent.script_json = json.loads(self.parent.script_input.value)
         self.parent.nights_json = (
             json.loads(self.parent.nights_input.value) if self.parent.nights_input.value != "" else None
         )
-        await interaction.response.defer()
+    
+    def handle_url_form(self) -> None:
+        with NamedTemporaryFile() as f:
+            urlretrieve(self.parent.script_url_input.value, f.name)
+            self.parent.script_json = json.load(f)
+            if self.parent.nights_url_input.value != "":
+                urlretrieve(self.parent.nights_url_input.value, f.name)
+                self.parent.nights_json = json.load(f)
+            else:
+                self.parent.nights_json = None
 
-        self.parent.generate.disabled = False
-        self.parent.generate.style = ButtonStyle.green
+    async def on_submit(self, interaction: Interaction) -> None:
+        match self.parent.mode:
+            case NewScriptView.MODE_JSON:
+                self.handle_json_form()
+            case NewScriptView.MODE_URL:
+                self.handle_url_form()
+        
+        await interaction.response.defer()
+        self.parent.enable_generation()
         await interaction.edit_original_response(view=self.parent)
         self.stop()
-
+    
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
         await interaction.response.send_message(
-            None, embed=embeds.make_error(self.parent.bot, message="Could not parse JSON.", error=error), ephemeral=True
+            None, embed=embeds.make_error(self.parent.bot, message="Invalid inputs:", error=error), ephemeral=True
         )
         self.parent.bot.logger.error(error)
         self.stop()
@@ -103,7 +121,11 @@ class NewScriptView(ui.View):
     It also allows the user to select the desired night order modes.
     """
 
-    def __init__(self, *, bot: "Bureaucrat", timeout: float | None = 180):
+    MODE_ATTACHMENT = 0
+    MODE_URL = 1
+    MODE_JSON = 2
+
+    def __init__(self, *, attachment: Attachment | None, bot: "Bureaucrat", timeout: float | None = 180):
         super().__init__(timeout=timeout)
         self.bot = bot
 
@@ -114,19 +136,77 @@ class NewScriptView(ui.View):
 
         self.script_input = ui.TextInput(label="Script JSON", style=TextStyle.paragraph)
         self.nights_input = ui.TextInput(label="Nightorder JSON", style=TextStyle.paragraph, required=False)
+        self.script_url_input = ui.TextInput(label="Script URL", style=TextStyle.short)
+        self.nights_url_input = ui.TextInput(label="Nightorder URL", style=TextStyle.short, required=False)
+        
+        self.attachment = attachment
+        if self.attachment:
+            self.mode = NewScriptView.MODE_ATTACHMENT
+        else:
+            self.mode = NewScriptView.MODE_JSON
+            self.next_mode = NewScriptView.MODE_URL
+
+    @ui.button(label="toggle", style=ButtonStyle.red)
+    async def toggle(self, interaction: Interaction, button: ui.Button):
+        self.mode = self.next_mode
+        match self.mode:
+            case NewScriptView.MODE_URL:
+                self.toggle.label = "Switch to JSON"
+                self.get_jsons.label = "Enter URL"
+                self.next_mode = NewScriptView.MODE_JSON
+            case NewScriptView.MODE_JSON:
+                self.toggle.label = "Switch to URL"
+                self.get_jsons.label = "Enter JSON"
+                self.next_mode = NewScriptView.MODE_URL
+        
+        await interaction.response.defer()
+        await interaction.edit_original_response(view=self)
+
+    async def setup(self):
+        if self.attachment:
+            try:
+                content = await self.attachment.read()
+                self.script_json = json.load(BytesIO(content))
+                self.nights_json = {}
+            except Exception as e:
+                self.bot.logger.warn(f"Failed to use attachment: {e}")
+                self.mode = NewScriptView.MODE_JSON
+        
+        match self.mode:
+            case NewScriptView.MODE_ATTACHMENT:
+                self.toggle.label = "Attachment Mode"
+                self.toggle.disabled = True
+                self.enable_generation()
+                self.remove_item(self.get_jsons)
+            case NewScriptView.MODE_JSON:
+                self.toggle.label = "Switch to URL"
+                self.toggle.disabled = False
+
+    def enable_generation(self):
+        self.generate.disabled = False
+        self.generate.style = ButtonStyle.green
 
     @classmethod
-    async def create(cls, *, interaction: Interaction, bot: "Bureaucrat", timeout: float | None = 180):
+    async def create(cls, *, attachment: Attachment | None = None, interaction: Interaction, bot: "Bureaucrat", timeout: float | None = 180):
+        view = NewScriptView(bot=bot, attachment=attachment)
+        await view.setup()
+
         embed = embeds.make_embed(
             bot=bot,
             title="Create a script",
-            description="Enter your `script.json` to start using [scriptmaker](https://www.github.com/rsarvar1a/scriptmaker)!",
+            description="",
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True, view=NewScriptView(bot=bot))
+
+        await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
     @ui.button(label="Enter JSON", style=ButtonStyle.blurple)
     async def get_jsons(self, interaction: Interaction, button: ui.Button):
-        scripts_modal = NewScriptModal().with_parent(parent=self).add_item(self.script_input).add_item(self.nights_input)
+        match self.mode:
+            case NewScriptView.MODE_JSON:
+                scripts_modal = NewScriptModal().with_parent(parent=self).add_item(self.script_input).add_item(self.nights_input)
+            case NewScriptView.MODE_URL:
+                scripts_modal = NewScriptModal().with_parent(parent=self).add_item(self.script_url_input).add_item(self.nights_url_input)
+        
         await interaction.response.send_modal(scripts_modal)
         await interaction.edit_original_response(view=self)
 
