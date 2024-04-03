@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "bureaucrat"
+version = "0.1.0"
+description = ""
+authors = ["Rohan Sarvaria <rsarvaria@uwaterloo.ca>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+discord = "^2.3.2"
+scriptmaker = "^1.4.4"
+sqids = "^0.4.1"
+asyncpg = "^0.29.0"
+ormar = "^0.20.0"
+python-dotenv = "^1.0.1"
+aioboto3 = "^12.3.0"
+psycopg2 = "^2.9.9"
+alembic = "^1.13.1"
+
+[tool.poetry.group.dev.dependencies]
+pylance = "^0.10.6"
+black = "^24.3.0"
+
+[tool.poetry.scripts]
+bureaucrat = "src.__main__:main"
+
+[tool.black]
+line-length = 120
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
