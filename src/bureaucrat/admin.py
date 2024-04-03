@@ -22,6 +22,13 @@ class Administrative(commands.GroupCog, group_name="administrative"):
 
     @commands.command()
     @commands.is_owner()
+    @commands.guild_only()
+    async def unregister(self, ctx: Context):
+        self.bot.tree.clear_commands(guild=ctx.guild)
+        await self.bot.tree.sync(guild=ctx.guild)
+
+    @commands.command()
+    @commands.is_owner()
     async def register(self, ctx: Context):
         """
         Register application commands in the home guild.
