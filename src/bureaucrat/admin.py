@@ -1,6 +1,7 @@
 import os
 
 from bureaucrat.utility import embeds
+from discord import app_commands as apc, Interaction
 from discord.ext import commands
 from discord.ext.commands import Context
 from typing import TYPE_CHECKING
@@ -21,25 +22,9 @@ class Administrative(commands.GroupCog, group_name="administrative"):
 
     @commands.command()
     @commands.is_owner()
-    async def list_extensions(self, ctx: Context):
-        """
-        Lists the enabled extensions.
-        """
-        cogs = "\n".join(f"Bureaucrat.{c}" for c in self.bot.cogs)
-        await ctx.reply(
-            embed=embeds.make_embed(
-                self.bot,
-                title="Extensions",
-                description=f"The following extensions are currently active: ```py\n{cogs}\n```",
-            ),
-            ephemeral=True,
-        )
-
-    @commands.command()
-    @commands.is_owner()
     async def register(self, ctx: Context):
         """
-        Registers application commands in the home guild.
+        Register application commands in the home guild.
         """
         home_guild = await self.bot.fetch_guild(int(os.getenv("HOME_GUILD")))
         self.bot.tree.copy_global_to(guild=home_guild)
@@ -57,7 +42,7 @@ class Administrative(commands.GroupCog, group_name="administrative"):
     @commands.is_owner()
     async def register_global(self, ctx: Context):
         """
-        Registers application commands globally.
+        Register application commands globally.
         """
         cmds = await self.bot.tree.sync()
         await ctx.reply(
@@ -66,3 +51,29 @@ class Administrative(commands.GroupCog, group_name="administrative"):
             ),
             ephemeral=True,
         )
+
+    @apc.command()
+    async def list_extensions(self, interaction: Interaction):
+        """
+        List Bureaucrat's enabled extensions.
+        """
+        cogs = "\n".join(f"{i + 1}. Bureaucrat.{c}" for i, c in enumerate(self.bot.cogs))
+        await interaction.response.send_message(
+            embed=embeds.make_embed(
+                self.bot,
+                title="Extensions",
+                description=f"The following extensions are currently active:\n{cogs}",
+            ),
+            ephemeral=True,
+        )
+
+    @apc.command()
+    async def restart(self, interaction: Interaction):
+        """
+        Shut down Bureaucrat. If the bot is running in a supervisor, this should restart the process.
+        """
+        if interaction.user.id != self.bot.owner_id:
+            return await interaction.response.send_message(bot=self.bot, embed=embeds.unauthorized("You must be a bot owner."), ephemeral=True)
+        await interaction.response.send_message(embed=embeds.make_embed(bot=self.bot, description="Shutting down."), ephemeral=True)
+        await self.bot.close()
+        exit(0)
