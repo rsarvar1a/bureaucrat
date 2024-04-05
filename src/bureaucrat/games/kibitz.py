@@ -65,6 +65,8 @@ class Kibitzers:
         Cleans up Kibitz for a given game.
         """
         kibitz = await self.ensure_kibitz(interaction, game, silent)
+        if kibitz is None:
+            return
     
         await interaction.guild.fetch_roles()
         role = interaction.guild.get_role(kibitz.role)

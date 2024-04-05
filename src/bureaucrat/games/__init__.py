@@ -41,7 +41,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         in_channel: Optional[Game] = await self.get_active_game(interaction.channel)
         if in_channel is None:
             await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="There is no active game in this channel."), ephemeral=True
+                embed=embeds.make_error(self.bot, message="There is no active game in this channel."), delete_after=5, ephemeral=True
             )
             return None
         else:
@@ -54,12 +54,12 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         category = interaction.channel.category
         if category is None:
             await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="You must be in a category."), ephemeral=True
+                embed=embeds.make_error(self.bot, message="You must be in a category."), delete_after=5, ephemeral=True
             )
             return False
         elif await ActiveCategory.objects.get_or_none(id=category.id) is None:
             await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="Text games are not enabled in this category."), ephemeral=True
+                embed=embeds.make_error(self.bot, message="Text games are not enabled in this category."), delete_after=5, ephemeral=True
             )
             return False
         return True
@@ -71,7 +71,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         if interaction.user.id != game.owner:
             await interaction.response.send_message(
                 embeds.unauthorized(self.bot, message=f"You are not the owner of this game, <@{game.owner}> is."),
-                ephemeral=True,
+                delete_after=5, ephemeral=True,
             )
             return False
         return True
@@ -84,7 +84,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         participant = await Participant.objects.get_or_none(game=game, member=as_member.id)
         if game.owner != as_member.id and participant.role != RoleType.STORYTELLER:
             await interaction.response.send_message(
-                embed=embeds.unauthorized(self.bot, message="You must be a storyteller or game owner."), ephemeral=True
+                embed=embeds.unauthorized(self.bot, message="You must be a storyteller or game owner."), delete_after=5, ephemeral=True
             )
             return False
         return True
