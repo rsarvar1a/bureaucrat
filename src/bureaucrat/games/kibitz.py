@@ -46,7 +46,7 @@ class Kibitzers:
         if await Kibitz.objects.get_or_none(game=game) is not None:
             await self.send_ethereal(interaction, description="There is already an active kibitz thread.")
             return
-
+        
         channel_id = game.channel
         channel: TextChannel = await interaction.guild.fetch_channel(channel_id)
         thread = await channel.create_thread(name="KIBITZ", type=ChannelType.private_thread)
@@ -72,6 +72,8 @@ class Kibitzers:
         role = interaction.guild.get_role(kibitz.role)
         if role is not None:
             await role.delete()
+
+        await kibitz.delete()
 
     async def cleanup(self, interaction: Interaction):
         """

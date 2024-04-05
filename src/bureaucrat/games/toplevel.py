@@ -20,6 +20,9 @@ class TopLevel:
         self.bot: "Bureaucrat" = parent.bot
         self.parent = parent
 
+    async def followup_ethereal(self, interaction: Interaction, **kwargs):
+        await self.parent.followup_ethereal(interaction, title="Games", **kwargs)
+
     async def send_ethereal(self, interaction: Interaction, **kwargs):
         await self.parent.send_ethereal(interaction, title="Games", **kwargs)
 
@@ -56,6 +59,8 @@ class TopLevel:
         if not await self.parent.ensure_active_category(interaction):
             return
 
+        await interaction.response.defer(ephemeral=True)
+
         channel_id = self.parent.get_channel_id(interaction.channel)
         channel = await interaction.guild.fetch_channel(channel_id)
         player_role, st_role = await self.parent._roles.prepare_channel(interaction.guild, channel)
@@ -79,7 +84,7 @@ class TopLevel:
         as_member = await interaction.guild.fetch_member(interaction.user.id)
         await self.parent._roles.set_role(game, as_member, RoleType.STORYTELLER)
 
-        await self.send_ethereal(interaction, description=f"Created game '{name}' in {channel.mention}.")
+        await self.followup_ethereal(interaction, description=f"Created game '{name}' in {channel.mention}.")
 
     async def mention(self, interaction: Interaction, role: Optional[RoleType], message: str):
         """
@@ -99,9 +104,9 @@ class TopLevel:
                 case RoleType.PLAYER:
                     if not await self.parent.ensure_privileged(interaction, game):
                         return
-                    ping = f"<@&{game.player_role}>: "
+                    ping = f"(@&{game.player_role}>) "
                 case RoleType.STORYTELLER:
-                    ping = f"<@&{game.st_role}>: "
+                    ping = f"(<@&{game.st_role}>) "
         
         description = f"{ping}{interaction.user.mention} sent the following message."
         await interaction.channel.send(content=description, embed=embeds.make_embed(self.bot, title=None, description=message))

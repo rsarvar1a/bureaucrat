@@ -108,7 +108,13 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
             thread: Thread = channel
             return thread.parent.id
 
-    async def send_ethereal(self, interaction, **kwargs):
+    async def followup_ethereal(self, interaction: Interaction, **kwargs):
+        """
+        Sends an ethereal followup.
+        """
+        await interaction.followup.send(embed=embeds.make_embed(self.bot, **kwargs), ephemeral=True)
+
+    async def send_ethereal(self, interaction: Interaction, **kwargs):
         """
         Sends an ethereal message, which is an autodeleting ephemeral.
         """

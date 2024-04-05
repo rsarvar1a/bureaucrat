@@ -39,7 +39,7 @@ class Configure:
         await game.update()
 
         # Handle this side effect explicitly.
-        if "name" in kwargs:
+        if "name" in kwargs and kwargs["name"] is not None:
             channel_id = self.parent.get_channel_id(interaction.channel)
             channel = await self.bot.fetch_channel(channel_id)
             await channel.edit(name=kwargs['name'])
