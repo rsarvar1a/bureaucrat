@@ -50,6 +50,9 @@ class Roles:
         await channel.set_permissions(st, overwrite=Roles.ST_PERMISSIONS)
         return player, st
 
+    async def send_ethereal(self, interaction: Interaction, **kwargs):
+        await self.parent.send_ethereal(interaction, title="Roles", **kwargs)
+
     async def set_role(self, game: Game, user: Member, role: RoleType):
         """
         Sets a single role on a participant, or removes all roles.
@@ -66,11 +69,14 @@ class Roles:
             case RoleType.PLAYER:
                 await user.remove_roles(st)
                 await user.add_roles(player)
+                await self.parent._kibitz._remove(game, user)
             case RoleType.STORYTELLER:
                 await user.remove_roles(player)
                 await user.add_roles(st)
+                await self.parent._kibitz._add(game, user)
             case RoleType.NONE:
                 await user.remove_roles(player, st)
+                await self.parent._kibitz._remove(game, user)
                 await participant.delete()
 
     # APP COMMANDS
@@ -126,18 +132,9 @@ class Roles:
         role = await Participant.objects.get_or_none(game=game, member=user.id)
         if role:
             await self.set_role(game, user, RoleType.NONE)
-            await interaction.response.send_message(
-                embed=embeds.make_embed(
-                    self.bot, title="Participants", description=f"{user.mention} has been removed from the game."
-                ),
-                ephemeral=True,
-            )
+            await self.send_ethereal(interaction, description=f"{user.mention} has been removed from the game.")
         else:
-            await interaction.response.send_message(
-                embeds=embeds.make_embed(
-                    self.bot, title="Participants", description=f"{user.mention} is not registered for this game."
-                )
-            )
+            await self.send_ethereal(interaction, description=f"{user.mention} is not registered for this game.")
 
     async def set(self, interaction: Interaction, user: Member, role: RoleType):
         """
@@ -155,17 +152,7 @@ class Roles:
 
         participant = await Participant.objects.get_or_none(game=game, member=user.id)
         if participant and participant.role == role:
-            await interaction.response.send_message(
-                embed=embeds.make_embed(
-                    self.bot, title="Participants", description=f"{user.mention} is already a {role.value}."
-                ),
-                ephemeral=True,
-            )
+            await self.send_ethereal(interaction, description=f"{user.mention} is already a {role.value}.")
         else:
             await self.set_role(game, user, role)
-            await interaction.response.send_message(
-                embed=embeds.make_embed(
-                    self.bot, title="Participants", description=f"{user.mention} is now a {role.value}."
-                ),
-                ephemeral=True,
-            )
+            await self.send_ethereal(interaction, description=f"{user.mention} is now a {role.value}.")

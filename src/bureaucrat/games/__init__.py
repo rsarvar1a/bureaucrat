@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 from .categories import Categories
 from .configure import Configure
+from .kibitz import Kibitzers
 from .roles import Roles, RoleType
 from .toplevel import TopLevel
 
@@ -28,6 +29,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         self._toplevel = TopLevel(self)
         self._categories = Categories(self)
         self._configure = Configure(self)
+        self._kibitz = Kibitzers(self)
         self._roles = Roles(self)
 
     # HELPERS
@@ -106,6 +108,12 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
             thread: Thread = channel
             return thread.parent.id
 
+    async def send_ethereal(self, interaction, **kwargs):
+        """
+        Sends an ethereal message, which is an autodeleting ephemeral.
+        """
+        await interaction.response.send_message(embed=embeds.make_embed(self.bot, **kwargs), delete_after=5, ephemeral=True)
+
     # TOP LEVEL
 
     @apc.command()
@@ -114,6 +122,32 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         End the running game in this channel, provided you are its owner.
         """
         await self._toplevel.end(interaction)
+
+    @apc.command()
+    @apc.choices(
+        role=[
+            apc.Choice(name="Player", value=1),
+            apc.Choice(name="Storyteller", value=2),
+        ]
+    )
+    @apc.describe(role="The role to ping.")
+    @apc.describe(message="What you'd like to say.")
+    async def mention(self, interaction: Interaction, role: Optional[apc.Choice[int]], message: str):
+        """
+        Make an announcement that pings the given role.
+        """
+        if role is None:
+            r = None 
+        else:
+            match role.value:
+                case 1:
+                    r = RoleType.PLAYER
+                case 2:
+                    r = RoleType.STORYTELLER
+                case _:
+                    r = None 
+
+        await self._toplevel.mention(interaction, r, message)
 
     @apc.command()
     @apc.describe(name="The name of the new game's channel.")
@@ -185,6 +219,38 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         Edit the game's configuration.
         """
         await self._configure.edit(interaction, name=name, script=script)
+
+    # KIBITZ MANAGEMENT
+
+    kibitz = apc.Group(name="kibitz", description="Control spectator access.")
+
+    @kibitz.command()
+    async def init(self, interaction: Interaction):
+        """
+        Create a kibitz thread and role.
+        """
+        await self._kibitz.init(interaction)
+    
+    @kibitz.command()
+    async def cleanup(self, interaction: Interaction):
+        """
+        Clean up a kibitz thread's role. This does not delete the thread or its contents.
+        """
+        await self._kibitz.cleanup(interaction)
+
+    @kibitz.command()
+    async def add(self, interaction: Interaction, user: Member):
+        """
+        Add a server member into the kibitz thread.
+        """
+        await self._kibitz.add(interaction, user)
+
+    @kibitz.command()
+    async def remove(self, interaction: Interaction, user: Member):
+        """
+        Remove a member from kibitz.
+        """
+        await self._kibitz.remove(interaction, user)
 
     # ROLE MANAGEMENT
 

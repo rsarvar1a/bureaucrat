@@ -46,8 +46,10 @@ class Configure:
 
         await self.show(interaction)
 
-
     async def show(self, interaction: Interaction):
+        """
+        Shows the configuration.
+        """
         if not await checks.in_guild(self.bot, interaction):
             return
 

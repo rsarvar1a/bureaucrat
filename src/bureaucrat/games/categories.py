@@ -34,7 +34,7 @@ class Categories:
             return
 
         await ActiveCategory.objects.get_or_create(id=category.id, guild=interaction.guild.id)
-        await interaction.response.send_message(embed=self.category_embed(category, "Enabled"), ephemeral=True)
+        await interaction.response.send_message(embed=self.category_embed(category, "Enabled"), delete_after=5, ephemeral=True)
 
     def category_embed(self, category, state):
         return embeds.make_embed(
@@ -46,4 +46,4 @@ class Categories:
             return
 
         await ActiveCategory.objects.filter(id=category.id).delete()
-        await interaction.response.send_message(embed=self.category_embed(category, "Disabled"), ephemeral=True)
+        await interaction.response.send_message(embed=self.category_embed(category, "Disabled"), delete_after=5, ephemeral=True)

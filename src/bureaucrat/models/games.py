@@ -95,6 +95,18 @@ class Participant(ormar.Model):
     ormar_config = CONFIG.copy(tablename="participants")
 
     id: int = ormar.Integer(primary_key=True, autoincrement=True)
-    game: Game = ormar.ForeignKey(Game)
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
     member: int = ormar.BigInteger()
     role: RoleType = ormar.Enum(enum_class=RoleType)
+
+
+class Kibitz(ormar.Model):
+    """
+    A model representing a special managed thread, the one for observers.
+    """
+    
+    ormar_config = CONFIG.copy(tablename="kibitz")
+
+    id: int = ormar.BigInteger(primary_key=True)
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+    role: int = ormar.BigInteger()
