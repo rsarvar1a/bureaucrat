@@ -41,7 +41,9 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         in_channel: Optional[Game] = await self.get_active_game(interaction.channel)
         if in_channel is None:
             await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="There is no active game in this channel."), delete_after=5, ephemeral=True
+                embed=embeds.make_error(self.bot, message="There is no active game in this channel."),
+                delete_after=5,
+                ephemeral=True,
             )
             return None
         else:
@@ -59,7 +61,9 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
             return False
         elif await ActiveCategory.objects.get_or_none(id=category.id) is None:
             await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="Text games are not enabled in this category."), delete_after=5, ephemeral=True
+                embed=embeds.make_error(self.bot, message="Text games are not enabled in this category."),
+                delete_after=5,
+                ephemeral=True,
             )
             return False
         return True
@@ -71,7 +75,8 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         if interaction.user.id != game.owner:
             await interaction.response.send_message(
                 embeds.unauthorized(self.bot, message=f"You are not the owner of this game, <@{game.owner}> is."),
-                delete_after=5, ephemeral=True,
+                delete_after=5,
+                ephemeral=True,
             )
             return False
         return True
@@ -84,7 +89,9 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         participant = await Participant.objects.get_or_none(game=game, member=as_member.id)
         if game.owner != as_member.id and participant.role != RoleType.STORYTELLER:
             await interaction.response.send_message(
-                embed=embeds.unauthorized(self.bot, message="You must be a storyteller or game owner."), delete_after=5, ephemeral=True
+                embed=embeds.unauthorized(self.bot, message="You must be a storyteller or game owner."),
+                delete_after=5,
+                ephemeral=True,
             )
             return False
         return True
@@ -118,7 +125,9 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         """
         Sends an ethereal message, which is an autodeleting ephemeral.
         """
-        await interaction.response.send_message(embed=embeds.make_embed(self.bot, **kwargs), delete_after=5, ephemeral=True)
+        await interaction.response.send_message(
+            embed=embeds.make_embed(self.bot, **kwargs), delete_after=5, ephemeral=True
+        )
 
     # TOP LEVEL
 
@@ -143,7 +152,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         Make an announcement that pings the given role.
         """
         if role is None:
-            r = None 
+            r = None
         else:
             match role.value:
                 case 1:
@@ -151,7 +160,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
                 case 2:
                     r = RoleType.STORYTELLER
                 case _:
-                    r = None 
+                    r = None
 
         await self._toplevel.mention(interaction, r, message)
 
@@ -236,7 +245,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         Create a kibitz thread and role.
         """
         await self._kibitz.init(interaction)
-    
+
     @kibitz.command()
     async def cleanup(self, interaction: Interaction):
         """
@@ -275,7 +284,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         List all users in the game.
         """
         if role is None:
-            r = None 
+            r = None
         else:
             match role.value:
                 case 1:
@@ -283,8 +292,8 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
                 case 2:
                     r = RoleType.STORYTELLER
                 case _:
-                    r = None 
-        
+                    r = None
+
         await self._roles.list(interaction, r)
 
     @roles.command()
@@ -313,5 +322,5 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
                 r = RoleType.PLAYER
             case 2:
                 r = RoleType.STORYTELLER
-            
+
         await self._roles.set(interaction, user, r)

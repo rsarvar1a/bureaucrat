@@ -18,7 +18,9 @@ if TYPE_CHECKING:
 
 class ScriptDetailsView(ui.View):
 
-    def __init__(self, *, bot: "Bureaucrat", id: str, pages: List[Document], script: Script, timeout: float | None = 180):
+    def __init__(
+        self, *, bot: "Bureaucrat", id: str, pages: List[Document], script: Script, timeout: float | None = 180
+    ):
         super().__init__(timeout=timeout)
         self.bot = bot
         self.id = id
@@ -105,11 +107,11 @@ class ScriptDetailsView(ui.View):
     @classmethod
     def order_by_resource(cls, doc: Document):
         stem = cls.get_stem(doc)
-        for option in ('script', 'nights-simple', 'nights-full'):
+        for option in ("script", "nights-simple", "nights-full"):
             if option in stem:
                 return option
         return ""
-    
+
     @classmethod
     def order_by_number(cls, doc: Document):
         stem = cls.get_stem(doc)
@@ -126,7 +128,9 @@ class ScriptDetailsView(ui.View):
             )
 
         pages = await Document.objects.filter(script=script, doctype=".png").order_by("-url").all()
-        pages = sorted(sorted(pages, key=ScriptDetailsView.order_by_number), key=ScriptDetailsView.order_by_resource, reverse=True)
+        pages = sorted(
+            sorted(pages, key=ScriptDetailsView.order_by_number), key=ScriptDetailsView.order_by_resource, reverse=True
+        )
         view = ScriptDetailsView(bot=bot, id=id, script=script, pages=pages)
         embed = await view.make_page(1)
 
@@ -141,7 +145,9 @@ class ScriptDetailsView(ui.View):
     async def make_page(self, page):
         author = await self.bot.fetch_user(self.script.author)
         brief = f"by {author.mention}\ncreated on <t:{int(self.script.created.timestamp())}:f>\nid: `{self.script.id}`"
-        return embeds.make_embed(self.bot, title=self.script.name, description=brief, image=self.pages[page - 1].url, thumb=self.script.logo)
+        return embeds.make_embed(
+            self.bot, title=self.script.name, description=brief, image=self.pages[page - 1].url, thumb=self.script.logo
+        )
 
     def populate_workspace(self, docs):
         threads: list[Thread] = []

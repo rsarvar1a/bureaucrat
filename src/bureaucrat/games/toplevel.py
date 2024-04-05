@@ -32,14 +32,14 @@ class TopLevel:
         """
         if not await checks.in_guild(self.bot, interaction):
             return
-        
+
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_owner(interaction, game):
             return
-        
+
         await ActiveGame.objects.filter(game=game).delete()
         await self.parent._roles.cleanup(interaction.guild, game.player_role, game.st_role)
         await self.parent._kibitz._cleanup(interaction, game)
@@ -92,14 +92,14 @@ class TopLevel:
         """
         if not await checks.in_guild(self.bot, interaction):
             return
-        
+
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
 
         if role is None:
             ping = ""
-        else:                
+        else:
             match role:
                 case RoleType.PLAYER:
                     if not await self.parent.ensure_privileged(interaction, game):
@@ -107,9 +107,11 @@ class TopLevel:
                     ping = f"(@&{game.player_role}>) "
                 case RoleType.STORYTELLER:
                     ping = f"(<@&{game.st_role}>) "
-        
+
         description = f"{ping}{interaction.user.mention} sent the following message."
-        await interaction.channel.send(content=description, embed=embeds.make_embed(self.bot, title=None, description=message))
+        await interaction.channel.send(
+            content=description, embed=embeds.make_embed(self.bot, title=None, description=message)
+        )
 
         await self.send_ethereal(interaction, description="Sent an announcement.")
 

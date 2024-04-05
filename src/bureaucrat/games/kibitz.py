@@ -17,7 +17,7 @@ class Kibitzers:
 
     async def send_ethereal(self, interaction: Interaction, **kwargs):
         await self.parent.send_ethereal(interaction, title="Kibitz", **kwargs)
-    
+
     async def ensure_kibitz(self, interaction: Interaction, game: Game, silent=False):
         """
         Ensures a kibitz thread exists in this game.
@@ -39,14 +39,14 @@ class Kibitzers:
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_privileged(interaction, game):
             return
-    
+
         if await Kibitz.objects.get_or_none(game=game) is not None:
             await self.send_ethereal(interaction, description="There is already an active kibitz thread.")
             return
-        
+
         channel_id = game.channel
         channel: TextChannel = await interaction.guild.fetch_channel(channel_id)
         thread = await channel.create_thread(name="KIBITZ", type=ChannelType.private_thread)
@@ -57,17 +57,17 @@ class Kibitzers:
         for st in await Participant.objects.all(game=game, role=RoleType.STORYTELLER):
             user = await interaction.guild.fetch_member(st.member)
             await self._add(game, user)
-        
+
         await self.send_ethereal(interaction, description="Successfully initialized Kibitz.")
 
-    async def _cleanup(self, interaction, game, silent = True):
+    async def _cleanup(self, interaction, game, silent=True):
         """
         Cleans up Kibitz for a given game.
         """
         kibitz = await self.ensure_kibitz(interaction, game, silent)
         if kibitz is None:
             return
-    
+
         await interaction.guild.fetch_roles()
         role = interaction.guild.get_role(kibitz.role)
         if role is not None:
@@ -85,10 +85,10 @@ class Kibitzers:
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_privileged(interaction, game):
             return
-    
+
         await self._cleanup(interaction, game, silent=False)
 
         await self.send_ethereal(interaction, description="Cleaned up this Kibitz's role.")
@@ -120,14 +120,14 @@ class Kibitzers:
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_privileged(interaction, game):
             return
-        
+
         kibitz = await self.ensure_kibitz(interaction, game, silent=False)
         if kibitz is None:
             return
-        
+
         await self._add(game, user)
         await self.send_ethereal(interaction, description=f"Added {user.mention} to Kibitz.")
 
@@ -158,13 +158,13 @@ class Kibitzers:
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_privileged(interaction, game):
             return
-        
+
         kibitz = await self.ensure_kibitz(interaction, game, silent=False)
         if kibitz is None:
             return
-        
+
         await self._remove(game, user)
         await self.send_ethereal(interaction, description=f"Removed {user.mention} from Kibitz.")

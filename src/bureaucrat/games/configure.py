@@ -26,13 +26,13 @@ class Configure:
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_privileged(interaction, game):
             return
 
         config = Config.load(game.config)
 
-        non_null = { k: v for k, v in kwargs.items() if v is not None }
+        non_null = {k: v for k, v in kwargs.items() if v is not None}
         config.__dict__.update(**non_null)
 
         game.config = config.dump()
@@ -42,7 +42,7 @@ class Configure:
         if "name" in kwargs and kwargs["name"] is not None:
             channel_id = self.parent.get_channel_id(interaction.channel)
             channel = await self.bot.fetch_channel(channel_id)
-            await channel.edit(name=kwargs['name'])
+            await channel.edit(name=kwargs["name"])
 
         await self.show(interaction)
 
@@ -56,7 +56,7 @@ class Configure:
         game = await self.parent.ensure_active(interaction)
         if game is None:
             return
-        
+
         if not await self.parent.ensure_privileged(interaction, game):
             return
 

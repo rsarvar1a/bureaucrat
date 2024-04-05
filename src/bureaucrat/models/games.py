@@ -26,7 +26,7 @@ class Config(JSONable):
     def __init__(self, *, name: str | None = None, script: Optional[str] = None):
         self.name = name
         self.script = script
-    
+
     def __repr__(self):
         return f"script: `{self.script}`"
 
@@ -104,7 +104,7 @@ class Kibitz(ormar.Model):
     """
     A model representing a special managed thread, the one for observers.
     """
-    
+
     ormar_config = CONFIG.copy(tablename="kibitz")
 
     id: int = ormar.BigInteger(primary_key=True)
