@@ -8,4 +8,5 @@ async def setup():
         await CONFIG.database.connect()
 
 
+from . import games
 from . import scripts

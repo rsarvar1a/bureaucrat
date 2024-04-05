@@ -60,12 +60,16 @@ class Scripts(commands.GroupCog, group_name="script"):
     @apc.describe(user="Search by script author.")
     @apc.describe(name="Search by script title.")
     @apc.describe(page_size="Number of scripts per page (default 10).")
-    async def list(self, interaction: Interaction, user: Optional[Member], name: Optional[str], page_size: Optional[int]) -> None:
+    async def list(
+        self, interaction: Interaction, user: Optional[Member], name: Optional[str], page_size: Optional[int]
+    ) -> None:
         """
         Search for scripts by author or name.
         """
         user_id = user.id if user else None
-        await ScriptListView.create(interaction=interaction, bot=self.bot, author=user_id, name=name, page_size=page_size, followup=False)
+        await ScriptListView.create(
+            interaction=interaction, bot=self.bot, author=user_id, name=name, page_size=page_size, followup=False
+        )
 
     @apc.command()
     @apc.rename(attachment="script")

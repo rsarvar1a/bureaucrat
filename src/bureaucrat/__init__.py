@@ -1,4 +1,4 @@
-from bureaucrat import admin, feedback, models, scripts, townsquare
+from bureaucrat import admin, feedback, models, scripts, games
 from bureaucrat.utility import aws, logging
 from discord import AllowedMentions, Intents
 from discord.ext.commands import DefaultHelpCommand
@@ -7,7 +7,7 @@ from discord.ext.commands.bot import Bot
 
 class Bureaucrat(Bot):
 
-    COG_MODULES = (admin, feedback, scripts, townsquare)
+    COG_MODULES = (admin, feedback, games, scripts)
     DEFAULT_PREFIX = ">"
     NACL = 84045472511033344
 

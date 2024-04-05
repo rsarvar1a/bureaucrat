@@ -32,7 +32,8 @@ class ScriptDetailsView(ui.View):
             docs = script.documents
         except ormar.NoMatch as e:
             await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message=f"Could not find the script with id {self.id}."), ephemeral=True
+                embed=embeds.make_error(self.bot, message=f"Could not find the script with id {self.id}."),
+                ephemeral=True,
             )
             self.stop()
             return
@@ -64,7 +65,7 @@ class ScriptDetailsView(ui.View):
     async def create(cls, *, interaction: Interaction, bot: "Bureaucrat", id: str, followup: bool = False):
         try:
             script = await Script.objects.get(id=id)
-        except Exception as e:
+        except ormar.NoMatch:
             return await interaction.followup.send(
                 embed=embeds.make_error(bot, message=f"Could not find the script with id {id}."), ephemeral=True
             )

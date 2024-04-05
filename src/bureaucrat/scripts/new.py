@@ -83,7 +83,7 @@ class NewScriptModal(ui.Modal, title="Input your JSONs!"):
         self.parent.nights_json = (
             json.loads(self.parent.nights_input.value) if self.parent.nights_input.value != "" else None
         )
-    
+
     def handle_url_form(self) -> None:
         with NamedTemporaryFile() as f:
             urlretrieve(self.parent.script_url_input.value, f.name)
@@ -100,12 +100,12 @@ class NewScriptModal(ui.Modal, title="Input your JSONs!"):
                 self.handle_json_form()
             case NewScriptView.MODE_URL:
                 self.handle_url_form()
-        
+
         await interaction.response.defer()
         self.parent.enable_generation()
         await interaction.edit_original_response(view=self.parent)
         self.stop()
-    
+
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
         await interaction.response.send_message(
             None, embed=embeds.make_error(self.parent.bot, message="Invalid inputs:", error=error), ephemeral=True
@@ -138,7 +138,7 @@ class NewScriptView(ui.View):
         self.nights_input = ui.TextInput(label="Nightorder JSON", style=TextStyle.paragraph, required=False)
         self.script_url_input = ui.TextInput(label="Script URL", style=TextStyle.short)
         self.nights_url_input = ui.TextInput(label="Nightorder URL", style=TextStyle.short, required=False)
-        
+
         self.attachment = attachment
         if self.attachment:
             self.mode = NewScriptView.MODE_ATTACHMENT
@@ -158,7 +158,7 @@ class NewScriptView(ui.View):
                 self.toggle.label = "Switch to URL"
                 self.get_jsons.label = "Enter JSON"
                 self.next_mode = NewScriptView.MODE_URL
-        
+
         await interaction.response.defer()
         await interaction.edit_original_response(view=self)
 
@@ -171,7 +171,7 @@ class NewScriptView(ui.View):
             except Exception as e:
                 self.bot.logger.warn(f"Failed to use attachment: {e}")
                 self.mode = NewScriptView.MODE_JSON
-        
+
         match self.mode:
             case NewScriptView.MODE_ATTACHMENT:
                 self.toggle.label = "Attachment Mode"
@@ -187,7 +187,14 @@ class NewScriptView(ui.View):
         self.generate.style = ButtonStyle.green
 
     @classmethod
-    async def create(cls, *, attachment: Attachment | None = None, interaction: Interaction, bot: "Bureaucrat", timeout: float | None = 180):
+    async def create(
+        cls,
+        *,
+        attachment: Attachment | None = None,
+        interaction: Interaction,
+        bot: "Bureaucrat",
+        timeout: float | None = 180,
+    ):
         view = NewScriptView(bot=bot, attachment=attachment)
         await view.setup()
 
@@ -203,10 +210,17 @@ class NewScriptView(ui.View):
     async def get_jsons(self, interaction: Interaction, button: ui.Button):
         match self.mode:
             case NewScriptView.MODE_JSON:
-                scripts_modal = NewScriptModal().with_parent(parent=self).add_item(self.script_input).add_item(self.nights_input)
+                scripts_modal = (
+                    NewScriptModal().with_parent(parent=self).add_item(self.script_input).add_item(self.nights_input)
+                )
             case NewScriptView.MODE_URL:
-                scripts_modal = NewScriptModal().with_parent(parent=self).add_item(self.script_url_input).add_item(self.nights_url_input)
-        
+                scripts_modal = (
+                    NewScriptModal()
+                    .with_parent(parent=self)
+                    .add_item(self.script_url_input)
+                    .add_item(self.nights_url_input)
+                )
+
         await interaction.response.send_modal(scripts_modal)
         await interaction.edit_original_response(view=self)
 
@@ -237,9 +251,7 @@ class NewScriptView(ui.View):
         self.stop()
 
     async def on_error(self, interaction: Interaction, error: Exception, item: ui.Item) -> None:
-        await interaction.followup.send(
-            None, embed=embeds.make_error(self.bot, error=error), ephemeral=True
-        )
+        await interaction.followup.send(None, embed=embeds.make_error(self.bot, error=error), ephemeral=True)
         self.bot.logger.error(error)
 
     async def create_script(self, *, interaction: Interaction):

@@ -26,6 +26,12 @@ class Administrative(commands.GroupCog, group_name="admin"):
     async def unregister(self, ctx: Context):
         self.bot.tree.clear_commands(guild=ctx.guild)
         await self.bot.tree.sync(guild=ctx.guild)
+        await ctx.reply(
+            embed=embeds.make_embed(
+                self.bot, title="Registration", description=f"Unregistered commands from guild {ctx.guild.name}."
+            ),
+            ephemeral=True,
+        )
 
     @commands.command()
     @commands.is_owner()
@@ -98,7 +104,11 @@ class Administrative(commands.GroupCog, group_name="admin"):
         Shut down Bureaucrat. If the bot is running in a supervisor, this should restart the process.
         """
         if interaction.user.id != self.bot.owner_id:
-            return await interaction.response.send_message(bot=self.bot, embed=embeds.unauthorized("You must be a bot owner."), ephemeral=True)
-        await interaction.response.send_message(embed=embeds.make_embed(bot=self.bot, description="Shutting down."), ephemeral=True)
+            return await interaction.response.send_message(
+                bot=self.bot, embed=embeds.unauthorized("You must be a bot owner."), ephemeral=True
+            )
+        await interaction.response.send_message(
+            embed=embeds.make_embed(bot=self.bot, description="Shutting down."), ephemeral=True
+        )
         await self.bot.close()
         exit(0)

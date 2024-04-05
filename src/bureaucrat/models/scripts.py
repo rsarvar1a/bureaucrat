@@ -1,4 +1,5 @@
 from datetime import datetime
+from ormar import ReferentialAction
 
 from .configure import CONFIG, ormar
 
@@ -29,5 +30,5 @@ class Document(ormar.Model):
 
     id: int = ormar.Integer(primary_key=True)
     doctype: str = ormar.String(max_length=10)
-    script: Script = ormar.ForeignKey(Script)
+    script: Script = ormar.ForeignKey(Script, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
     url: str = ormar.String(max_length=500)

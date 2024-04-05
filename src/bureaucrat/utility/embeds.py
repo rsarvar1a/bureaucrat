@@ -7,10 +7,7 @@ if TYPE_CHECKING:
 
 
 def make_base_embed(bot: "Bureaucrat"):
-    return (
-        Embed(timestamp=datetime.utcnow())
-        .set_footer(text="Bureaucrat", icon_url=bot.user.avatar.url)
-    )
+    return Embed(timestamp=datetime.utcnow()).set_footer(text="Bureaucrat", icon_url=bot.user.avatar.url)
 
 
 def make_embed(bot: "Bureaucrat", title=None, description=None, image=None, thumb=None):
@@ -36,3 +33,7 @@ def unauthorized(bot: "Bureaucrat", message: str):
     embed.title = "Sorry, you can't do that."
     embed.description = message
     return embed
+
+
+def guild_only(bot: "Bureaucrat"):
+    return unauthorized(bot, "You must run this command inside a server.")
