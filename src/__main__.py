@@ -8,7 +8,7 @@ import os
 
 def main():
 
-    params = {k: os.environ.get(k, None) for k in ["LOG_LEVEL", "OWNER", "PREFIX"]}
+    params = {k: os.environ.get(k, None) for k in ["LOG_LEVEL", "OWNER_ID", "PREFIX"]}
     params = {k.lower(): v for k, v in params.items() if v is not None}
 
     bot = bureaucrat.Bureaucrat(**params)

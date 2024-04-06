@@ -32,6 +32,7 @@ class Bureaucrat(Bot):
             "owner_id": owner_id,
         }
         super().__init__(prefix, **options)
+        self.logger.debug(f"Owned by {self.owner_id}.")
 
     async def setup_hook(self) -> None:
 
