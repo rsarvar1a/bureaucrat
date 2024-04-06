@@ -1,4 +1,4 @@
-from bureaucrat import admin, feedback, models, scripts, games
+from bureaucrat import admin, feedback, games, models, reminders, scripts
 from bureaucrat.utility import aws, logging
 from discord import AllowedMentions, Intents
 from discord.ext.commands import DefaultHelpCommand
@@ -7,7 +7,7 @@ from discord.ext.commands.bot import Bot
 
 class Bureaucrat(Bot):
 
-    COG_MODULES = (admin, feedback, games, scripts)
+    COG_MODULES = (admin, feedback, games, reminders, scripts)
     DEFAULT_PREFIX = ">"
     NACL = 84045472511033344
 
@@ -20,6 +20,7 @@ class Bureaucrat(Bot):
         # Create Bureaucrat's logging handle, so that all Bureaucrat-level modules use the same label.
         severity = logging.severity(log_level)
         self.logger = logging.make_logger(name="Bureaucrat", severity=severity)
+        self.logger.debug("Debug mode enabled.")
 
         # Initialize the underlying client.
         options = {

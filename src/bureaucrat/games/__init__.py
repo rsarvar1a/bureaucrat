@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from .categories import Categories
 from .configure import Configure
 from .kibitz import Kibitzers
+from .reminders import Reminders
 from .roles import Roles, RoleType
 from .toplevel import TopLevel
 
@@ -30,6 +31,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         self._categories = Categories(self)
         self._configure = Configure(self)
         self._kibitz = Kibitzers(self)
+        self._reminders = Reminders(self)
         self._roles = Roles(self)
 
     # HELPERS
@@ -167,7 +169,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
     @apc.command()
     @apc.describe(name="The name of the new game's channel.")
     @apc.describe(script="The id of an existing script.")
-    async def new(self, interaction: Interaction, name: Optional[str], script: Optional[str]):
+    async def create(self, interaction: Interaction, name: Optional[str], script: Optional[str]):
         """
         Create a new game in an empty channel.
         """
@@ -266,6 +268,44 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         Remove a member from kibitz.
         """
         await self._kibitz.remove(interaction, user)
+
+    # REMINDERS
+
+    reminders = apc.Group(name="reminders", description="Manage reminders on a game.")
+
+    @reminders.command()
+    @apc.describe(id="The reminder id.")
+    async def delete(self, interaction: Interaction, id: str):
+        """
+        Delete an active reminder.
+        """
+        await self._reminders.delete(interaction, id)
+
+    @reminders.command()
+    async def list(self, interaction: Interaction):
+        """
+        List all reminders on the active game.
+        """
+        await self._reminders.list(interaction)
+
+    @reminders.command()
+    @apc.describe(message="The reminder message.")
+    @apc.describe(duration="The duration this reminder should last for, in 99d23h59m59s format.")
+    @apc.describe(intervals="A list of times from expiry to ping this reminder at.")
+    async def new(self, interaction: Interaction, message: str, duration: str, intervals: Optional[str]):
+        """
+        Set a new reminder with a given expiry duration.
+        """
+        await self._reminders.new(interaction, message, duration, intervals)
+
+    @reminders.command()
+    @apc.describe(id="The id of the reminder.")
+    @apc.describe(duration="The new expiry duration of the reminder.")
+    async def push(self, interaction: Interaction, id: str, duration: str):
+        """
+        Push back a reminder, refreshing the expiry date and rearming the reminder's ping intervals.
+        """
+        await self._reminders.push(interaction, id, duration)
 
     # ROLE MANAGEMENT
 

@@ -1,9 +1,9 @@
 from enum import Enum
 from ormar import ReferentialAction
 from typing import Optional
-from uuid import UUID
 
 from .configure import CONFIG, DictType, JSONable, ormar
+from .reminders import Reminder
 
 
 class ActiveCategory(ormar.Model):
@@ -110,3 +110,15 @@ class Kibitz(ormar.Model):
     id: int = ormar.BigInteger(primary_key=True)
     game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
     role: int = ormar.BigInteger()
+
+
+class GameReminder(ormar.Model):
+    """
+    A reminder tied specifically to a game.
+    """
+
+    ormar_config = CONFIG.copy(tablename="game_reminders")
+
+    id: int = ormar.Integer(primary_key=True, autoincrement=True)
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+    reminder: Reminder = ormar.ForeignKey(Reminder, unique=True, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)

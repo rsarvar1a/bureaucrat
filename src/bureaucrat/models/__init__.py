@@ -9,4 +9,5 @@ async def setup():
 
 
 from . import games
+from . import reminders
 from . import scripts

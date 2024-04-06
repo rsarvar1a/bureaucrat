@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 def make_base_embed(bot: "Bureaucrat"):
-    return Embed(timestamp=datetime.utcnow()).set_footer(text="Bureaucrat", icon_url=bot.user.avatar.url)
+    return Embed(timestamp=datetime.now()).set_footer(text="Bureaucrat", icon_url=bot.user.avatar.url)
 
 
 def make_embed(bot: "Bureaucrat", title=None, description=None, image=None, thumb=None):
