@@ -391,9 +391,24 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
     signups = apc.Group(name="signups", description="Track signups for your game.")
 
+    @signups.command(name="clear")
+    async def signups_clear(self, interaction: Interaction):
+        """
+        Clear signups.
+        """
+        await self._signups.clear(interaction)
+
     @signups.command(name="list")
     async def signups_list(self, interaction: Interaction):
         """
         See all signups for your game.
         """
         await self._signups.list(interaction)
+
+    @signups.command(name="take")
+    @apc.describe(number="The number of signups to take.")
+    async def signups_take(self, interaction: Interaction, number: Optional[int]):
+        """
+        Take the first n signups and turn them into players.
+        """
+        await self._signups.take(interaction, number)

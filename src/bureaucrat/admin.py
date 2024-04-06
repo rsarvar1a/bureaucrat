@@ -83,6 +83,16 @@ class Administrative(commands.GroupCog, group_name="admin"):
         )
 
     @apc.command()
+    async def owners(self, interaction: Interaction):
+        """
+        List Bureaucrat's owners.
+        """
+        description = "\n".join(f"- <@{o}>" for o in self.bot.owner_ids)
+        await interaction.response.send_message(
+            embed=embeds.make_embed(self.bot, title="Owners", description=description), ephemeral=True
+        )
+
+    @apc.command()
     async def list_extensions(self, interaction: Interaction):
         """
         List Bureaucrat's enabled extensions.

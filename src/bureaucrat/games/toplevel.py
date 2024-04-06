@@ -66,9 +66,11 @@ class TopLevel:
         player_role, st_role = await self.parent._roles.prepare_channel(interaction.guild, channel)
 
         config = Config(name=name, script=script, seats=seats)
+        name = config.name
+        
         state = State()
 
-        channel = await channel.edit(config.name)
+        channel = await channel.edit(name=name)
 
         game = await Game.objects.create(
             channel=channel.id,
@@ -179,14 +181,17 @@ class TopLevel:
         game_channel = await self.bot.fetch_channel(game.channel)
         await self.send_ethereal(interaction, description=f"{user.mention} is now the owner of this game.")
 
-        await user.create_dm()
-        await user.dm_channel.send(
-            embed=embeds.make_embed(
-                self.bot,
-                title=game_channel.name,
-                description=f"You are now the owner of the game in {game_channel.mention}.",
+        try:
+            await user.create_dm()
+            await user.dm_channel.send(
+                embed=embeds.make_embed(
+                    self.bot,
+                    title=game_channel.name,
+                    description=f"You are now the owner of the game in {game_channel.mention}.",
+                )
             )
-        )
+        except:
+            pass
 
     async def unregister(self, interaction: Interaction):
         if not await checks.in_guild(self.bot, interaction):
