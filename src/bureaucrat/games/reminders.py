@@ -62,8 +62,9 @@ class Reminders:
         if not await self.parent.ensure_privileged(interaction, game):
             return
 
+        pinged_message = f"<@&{game.player_role}> {message}"
         channel = self.bot.get_channel(game.channel) or await self.bot.fetch_channel(game.channel)
-        reminder = await self._reminders()._new(interaction, interaction.user, channel, message, duration, intervals)
+        reminder = await self._reminders()._new(interaction, interaction.user, channel, pinged_message, duration, intervals)
         await GameReminder.objects.create(game=game, reminder=reminder)
 
     async def push(self, interaction: Interaction, id: str, duration: str):

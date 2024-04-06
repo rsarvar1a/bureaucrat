@@ -23,12 +23,16 @@ class Config(JSONable):
     The configuration of a game.
     """
 
-    def __init__(self, *, name: str | None = None, script: Optional[str] = None):
+    def __init__(self, *, name: Optional[str] = 'new-game', script: Optional[str] = None, seats: int = 12):
         self.name = name
         self.script = script
+        self.seats = seats
 
     def __repr__(self):
-        return f"script: `{self.script}`"
+        return "\n".join([
+            f"script: `{self.script}`",
+            f"{self.seats} players"
+        ])
 
 
 class State(JSONable):
@@ -85,6 +89,18 @@ class ManagedThread(ormar.Model):
 
     id: int = ormar.BigInteger(primary_key=True)
     game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+
+
+class Signup(ormar.Model):
+    """
+    A signup request from a player.
+    """
+
+    ormar_config = CONFIG.copy(tablename="signups")
+    
+    id: int = ormar.Integer(primary_key=True, autoincrement=True)
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+    member: int = ormar.BigInteger()
 
 
 class Participant(ormar.Model):

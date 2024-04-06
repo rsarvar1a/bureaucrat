@@ -24,7 +24,6 @@ class Reminders(commands.GroupCog, group_name="reminders"):
     )
 
     def __init__(self, bot: "Bureaucrat") -> None:
-        super().__init__()
         self.bot = bot
         self.fire.start()
 

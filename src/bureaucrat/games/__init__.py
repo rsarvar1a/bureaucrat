@@ -5,7 +5,7 @@ from bureaucrat.utility import checks, embeds
 from discord import app_commands as apc, CategoryChannel, Member, Interaction, Thread
 from discord.abc import GuildChannel
 from discord.ext import commands
-from typing import Optional, TYPE_CHECKING, Coroutine, Any
+from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bureaucrat import Bureaucrat
@@ -15,6 +15,7 @@ from .configure import Configure
 from .kibitz import Kibitzers
 from .reminders import Reminders
 from .roles import Roles, RoleType
+from .signups import Signups
 from .toplevel import TopLevel
 
 
@@ -25,14 +26,15 @@ async def setup(bot):
 class Games(commands.GroupCog, group_name="game", description="Commands for managing and running text games."):
 
     def __init__(self, bot: "Bureaucrat") -> None:
-        super().__init__()
         self.bot = bot
+
         self._toplevel = TopLevel(self)
         self._categories = Categories(self)
         self._configure = Configure(self)
         self._kibitz = Kibitzers(self)
         self._reminders = Reminders(self)
         self._roles = Roles(self)
+        self._signups = Signups(self)
 
     # HELPERS
 
@@ -74,9 +76,12 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         """
         Ensures the invoker is the owner of the current game.
         """
+        if interaction.user.id in self.bot.owner_ids:
+            return True
+        
         if interaction.user.id != game.owner:
             await interaction.response.send_message(
-                embeds.unauthorized(self.bot, message=f"You are not the owner of this game, <@{game.owner}> is."),
+                embed=embeds.unauthorized(self.bot, message=f"You are not the owner of this game, <@{game.owner}> is."),
                 delete_after=5,
                 ephemeral=True,
             )
@@ -87,6 +92,9 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         """
         Ensures the invoker is the owner of the game or a storyteller.
         """
+        if interaction.user.id in self.bot.owner_ids:
+            return True
+        
         as_member = await interaction.guild.fetch_member(interaction.user.id)
         participant = await Participant.objects.get_or_none(game=game, member=as_member.id)
         if game.owner != as_member.id and participant.role != RoleType.STORYTELLER:
@@ -133,14 +141,14 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
     # TOP LEVEL
 
-    @apc.command()
-    async def end(self, interaction: Interaction):
+    @apc.command(name="end")
+    async def toplevel_end(self, interaction: Interaction):
         """
         End the running game in this channel, provided you are its owner.
         """
         await self._toplevel.end(interaction)
 
-    @apc.command()
+    @apc.command(name="mention")
     @apc.choices(
         role=[
             apc.Choice(name="Player", value=1),
@@ -149,7 +157,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
     )
     @apc.describe(role="The role to ping.")
     @apc.describe(message="What you'd like to say.")
-    async def mention(self, interaction: Interaction, role: Optional[apc.Choice[int]], message: str):
+    async def toplevel_mention(self, interaction: Interaction, role: Optional[apc.Choice[int]], message: str):
         """
         Make an announcement that pings the given role.
         """
@@ -166,54 +174,68 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
         await self._toplevel.mention(interaction, r, message)
 
-    @apc.command()
+    @apc.command(name="new")
     @apc.describe(name="The name of the new game's channel.")
     @apc.describe(script="The id of an existing script.")
-    async def create(self, interaction: Interaction, name: Optional[str], script: Optional[str]):
+    async def toplevel_new(self, interaction: Interaction, name: Optional[str], script: Optional[str], seats: Optional[int]):
         """
         Create a new game in an empty channel.
         """
-        await self._toplevel.new(interaction, name=name, script=script)
+        await self._toplevel.new(interaction, name=name, script=script, seats=seats)
 
-    @apc.command()
-    async def script(self, interaction: Interaction):
+    @apc.command(name="signup")
+    async def toplevel_signup(self, interaction: Interaction):
+        """
+        Sign up for the game in this channel.
+        """
+        await self._toplevel.signup(interaction)
+
+    @apc.command(name="script")
+    async def toplevel_script(self, interaction: Interaction):
         """
         Opens a script details view, if a script exists.
         """
         await self._toplevel.script(interaction)
 
-    @apc.command()
+    @apc.command(name="transfer")
     @apc.describe(user="A server member.")
-    async def transfer(self, interaction: Interaction, user: Member):
+    async def toplevel_transfer(self, interaction: Interaction, user: Member):
         """
         Transfer ownership of this game to the given user.
         """
         await self._toplevel.transfer(interaction, user)
 
+    @apc.command(name="unregister")
+    async def toplevel_unregister(self, interaction: Interaction):
+        """
+        Remove your signup from this game.
+        """
+        await self._toplevel.unregister(interaction)
+
     # CATEGORY MANAGEMENT
 
     categories = apc.Group(name="categories", description="Configure which categories in your server allow text games.")
 
-    @categories.command()
-    async def active(self, interaction: Interaction):
+    @categories.command(name="active")
+    async def categories_active(self, interaction: Interaction):
         """
         List categories that support text games.
         """
         await self._categories.active(interaction)
 
-    @categories.command()
+    @categories.command(name="add")
     @apc.checks.has_permissions(manage_guild=True)
     @apc.describe(category="The category to activate.")
-    async def add(self, interaction: Interaction, category: CategoryChannel):
+    async def categories_add(self, interaction: Interaction, category: CategoryChannel):
         """
         Enable text games in a category.
         """
         await self._categories.add(interaction, category)
 
-    @categories.command()
+    @categories.command(name="remove")
     @apc.checks.has_permissions(manage_guild=True)
     @apc.describe(category="The category to deactivate.")
-    async def remove(self, interaction: Interaction, category: CategoryChannel):
+    async def categories_remove(self, interaction: Interaction, category: CategoryChannel):
         """
         Disable text games in a category.
         """
@@ -223,47 +245,47 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
     configure = apc.Group(name="config", description="Configure one of your games.")
 
-    @configure.command()
-    async def show(self, interaction: Interaction):
+    @configure.command(name="show")
+    async def configure_show(self, interaction: Interaction):
         """
         Show the game's configuration.
         """
         await self._configure.show(interaction)
 
-    @configure.command()
-    async def edit(self, interaction: Interaction, name: Optional[str], script: Optional[str]):
+    @configure.command(name="edit")
+    async def configure_edit(self, interaction: Interaction, name: Optional[str], script: Optional[str], seats: Optional[int]):
         """
         Edit the game's configuration.
         """
-        await self._configure.edit(interaction, name=name, script=script)
+        await self._configure.edit(interaction, name=name, script=script, seats=seats)
 
     # KIBITZ MANAGEMENT
 
     kibitz = apc.Group(name="kibitz", description="Control spectator access.")
 
-    @kibitz.command()
-    async def init(self, interaction: Interaction):
+    @kibitz.command(name="init")
+    async def kibitz_init(self, interaction: Interaction):
         """
         Create a kibitz thread and role.
         """
         await self._kibitz.init(interaction)
 
-    @kibitz.command()
-    async def cleanup(self, interaction: Interaction):
+    @kibitz.command(name="cleanup")
+    async def kibitz_cleanup(self, interaction: Interaction):
         """
         Clean up a kibitz thread's role. This does not delete the thread or its contents.
         """
         await self._kibitz.cleanup(interaction)
 
-    @kibitz.command()
-    async def add(self, interaction: Interaction, user: Member):
+    @kibitz.command(name="add")
+    async def kibitz_add(self, interaction: Interaction, user: Member):
         """
         Add a server member into the kibitz thread.
         """
         await self._kibitz.add(interaction, user)
 
-    @kibitz.command()
-    async def remove(self, interaction: Interaction, user: Member):
+    @kibitz.command(name="remove")
+    async def kibitz_remove(self, interaction: Interaction, user: Member):
         """
         Remove a member from kibitz.
         """
@@ -273,35 +295,35 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
     reminders = apc.Group(name="reminders", description="Manage reminders on a game.")
 
-    @reminders.command()
+    @reminders.command(name="delete")
     @apc.describe(id="The reminder id.")
-    async def delete(self, interaction: Interaction, id: str):
+    async def reminders_delete(self, interaction: Interaction, id: str):
         """
         Delete an active reminder.
         """
         await self._reminders.delete(interaction, id)
 
-    @reminders.command()
-    async def list(self, interaction: Interaction):
+    @reminders.command(name="list")
+    async def reminders_list(self, interaction: Interaction):
         """
         List all reminders on the active game.
         """
         await self._reminders.list(interaction)
 
-    @reminders.command()
+    @reminders.command(name="new")
     @apc.describe(message="The reminder message.")
     @apc.describe(duration="The duration this reminder should last for, in 99d23h59m59s format.")
     @apc.describe(intervals="A list of times from expiry to ping this reminder at.")
-    async def new(self, interaction: Interaction, message: str, duration: str, intervals: Optional[str]):
+    async def reminders_new(self, interaction: Interaction, message: str, duration: str, intervals: Optional[str]):
         """
         Set a new reminder with a given expiry duration.
         """
         await self._reminders.new(interaction, message, duration, intervals)
 
-    @reminders.command()
+    @reminders.command(name="push")
     @apc.describe(id="The id of the reminder.")
     @apc.describe(duration="The new expiry duration of the reminder.")
-    async def push(self, interaction: Interaction, id: str, duration: str):
+    async def reminders_push(self, interaction: Interaction, id: str, duration: str):
         """
         Push back a reminder, refreshing the expiry date and rearming the reminder's ping intervals.
         """
@@ -311,7 +333,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
     roles = apc.Group(name="roles", description="Set permissions for players and storytellers.")
 
-    @roles.command()
+    @roles.command(name="list")
     @apc.choices(
         role=[
             apc.Choice(name="Player", value=1),
@@ -319,7 +341,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         ]
     )
     @apc.describe(role="Filter users by a specific role.")
-    async def list(self, interaction: Interaction, role: Optional[apc.Choice[int]]):
+    async def roles_list(self, interaction: Interaction, role: Optional[apc.Choice[int]]):
         """
         List all users in the game.
         """
@@ -336,15 +358,15 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
         await self._roles.list(interaction, r)
 
-    @roles.command()
+    @roles.command(name="remove")
     @apc.describe(user="A server member.")
-    async def remove(self, interaction: Interaction, user: Member):
+    async def roles_remove(self, interaction: Interaction, user: Member):
         """
         Removes a user from the game.
         """
         await self._roles.remove(interaction, user)
 
-    @roles.command()
+    @roles.command(name="set")
     @apc.choices(
         role=[
             apc.Choice(name="Player", value=1),
@@ -353,7 +375,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
     )
     @apc.describe(role="The role to assign to this user.")
     @apc.describe(user="A server member.")
-    async def set(self, interaction: Interaction, user: Member, role: apc.Choice[int]):
+    async def roles_set(self, interaction: Interaction, user: Member, role: apc.Choice[int]):
         """
         Set a user's role in the game.
         """
@@ -364,3 +386,14 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
                 r = RoleType.STORYTELLER
 
         await self._roles.set(interaction, user, r)
+
+    # SIGNUPS
+
+    signups = apc.Group(name="signups", description="Track signups for your game.")
+
+    @signups.command(name="list")
+    async def signups_list(self, interaction: Interaction):
+        """
+        See all signups for your game.
+        """
+        await self._signups.list(interaction)

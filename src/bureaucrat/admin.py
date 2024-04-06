@@ -4,7 +4,7 @@ from bureaucrat.utility import embeds
 from discord import app_commands as apc, Interaction
 from discord.ext import commands
 from discord.ext.commands import Context
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from bureaucrat import Bureaucrat
@@ -17,7 +17,6 @@ async def setup(bot):
 class Administrative(commands.GroupCog, group_name="admin"):
 
     def __init__(self, bot: "Bureaucrat") -> None:
-        super().__init__()
         self.bot = bot
 
     @commands.command()
@@ -39,7 +38,7 @@ class Administrative(commands.GroupCog, group_name="admin"):
         """
         Register application commands in the home guild.
         """
-        home_guild = await self.bot.fetch_guild(int(os.getenv("HOME_GUILD")))
+        home_guild = await self.bot.fetch_guild(int(self.bot.config.home_guild))
         self.bot.tree.copy_global_to(guild=home_guild)
         cmds = await self.bot.tree.sync(guild=home_guild)
         await ctx.reply(

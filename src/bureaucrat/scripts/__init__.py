@@ -20,7 +20,6 @@ async def setup(bot):
 class Scripts(commands.GroupCog, group_name="script"):
 
     def __init__(self, bot: "Bureaucrat") -> None:
-        super().__init__()
         self.bot = bot
 
     @apc.command()
