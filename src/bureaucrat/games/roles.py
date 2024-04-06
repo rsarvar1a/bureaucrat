@@ -1,4 +1,4 @@
-from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType
+from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType, Signup
 from bureaucrat.utility import checks, embeds
 from discord import Interaction, Member, Guild, Permissions, PermissionOverwrite, Role, TextChannel
 from enum import Enum
@@ -156,3 +156,5 @@ class Roles:
         else:
             await self.set_role(game, user, role)
             await self.send_ethereal(interaction, description=f"{user.mention} is now a {role.value}.")
+
+        await Signup.objects.filter(game=game, member=user.id).delete()

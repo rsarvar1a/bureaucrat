@@ -412,3 +412,19 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         Take the first n signups and turn them into players.
         """
         await self._signups.take(interaction, number)
+
+    @signups.command(name="add")
+    @apc.describe(user="The user to add a signup entry for.")
+    async def signups_add(self, interaction: Interaction, user: Member):
+        """
+        Manually add a signup entry.
+        """
+        await self._signups.add(interaction, user)
+
+    @signups.command(name="delete")
+    @apc.describe(user="The user to remove from signups.")
+    async def signups_delete(self, interaction: Interaction, user: Member):
+        """
+        Delete someone's signup entry.
+        """
+        await self._signups.remove(interaction, user)
