@@ -218,7 +218,7 @@ class Reminders(commands.GroupCog, group_name="reminders"):
             channel_id = interval.reminder.channel
             channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
             stamp = int(interval.reminder.expires.timestamp())
-            description = f"reminder `{interval.reminder.id}`: <@{interval.reminder.author}>\n {interval.reminder.message} <t:{stamp}:R> (<t:{stamp}:t>)"
+            description = f"Reminder `{interval.reminder.id}`for <@{interval.reminder.author}>:\n{interval.reminder.message} <t:{stamp}:R> (<t:{stamp}:t>)"
 
             # Insert interval reminders back into the table, but don't refire them unless explicitly rearmed.
             await channel.send(content=description)
