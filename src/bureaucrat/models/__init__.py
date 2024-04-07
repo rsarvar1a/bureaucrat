@@ -8,6 +8,7 @@ async def setup():
         await CONFIG.database.connect()
 
 
+from . import feedback
 from . import games
 from . import reminders
 from . import scripts

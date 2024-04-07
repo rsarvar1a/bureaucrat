@@ -21,7 +21,7 @@ class ScriptListView(ui.View):
         self.max = max_page
         self.page_size = page_size
 
-    @ui.button(label="Previous", disabled=True, style=ButtonStyle.grey)
+    @ui.button(label="<", disabled=True, style=ButtonStyle.grey)
     async def backwards(self, interaction: Interaction, button: ui.Button):
         self.page -= 1
         self.enable(self.forwards)
@@ -29,7 +29,7 @@ class ScriptListView(ui.View):
             self.disable(self.backwards)
         await self.update(interaction)
 
-    @ui.button(label="Next", disabled=True, style=ButtonStyle.grey)
+    @ui.button(label=">", disabled=True, style=ButtonStyle.grey)
     async def forwards(self, interaction: Interaction, button: ui.Button):
         self.page += 1
         self.enable(self.backwards)
