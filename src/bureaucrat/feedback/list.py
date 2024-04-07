@@ -39,7 +39,7 @@ class FeedbackListView(ui.View):
         submitter = "anonymously" if entry.anonymous else f"by <@{entry.submitter}>"
         header = f"Feedback for <#{entry.game.channel}>\nSubmitted {submitter} <t:{int(entry.created.timestamp())}:R>"
         description = self.parent.make_embed(entry, header)
-        return embeds.make_embed(self.bot, title="Feedback", description=description)
+        return embeds.make_embed(self.bot, title=f"Feedback (page {self.page} of {self.max})", description=description)
 
     async def paginate(self):
         return await Feedback.objects.select_related(Feedback.game).filter(**self.query).order_by("-created").paginate(self.page, page_size=1).get()

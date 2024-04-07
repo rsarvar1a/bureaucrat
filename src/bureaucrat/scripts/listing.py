@@ -40,7 +40,7 @@ class ScriptListView(ui.View):
     async def update(self, interaction: Interaction):
         result = await ScriptListView.paginate(self.query, self.page, self.page_size)
         page = await ScriptListView.make_page(bot=self.bot, result=result)
-        embed = ScriptListView.make_embed(bot=self.bot, num=self.page, page=page)
+        embed = ScriptListView.make_embed(bot=self.bot, num=self.page, max=self.max, page=page)
 
         await interaction.response.defer()
         await interaction.edit_original_response(embed=embed, view=self)
@@ -74,7 +74,7 @@ class ScriptListView(ui.View):
         try:
             page_1_result = await ScriptListView.paginate(query, 1, page_size)
             page = await ScriptListView.make_page(bot=bot, result=page_1_result)
-            embed = ScriptListView.make_embed(bot=bot, num=1, page=page)
+            embed = ScriptListView.make_embed(bot=bot, num=1, max=max_page, page=page)
 
             view = ScriptListView(bot=bot, query=query, max_page=max_page, page_size=page_size)
             if view.max > 1:
@@ -94,8 +94,8 @@ class ScriptListView(ui.View):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @classmethod
-    def make_embed(cls, *, bot, num, page):
-        return embeds.make_embed(bot=bot, title=f"Search results (page {num})", description=page)
+    def make_embed(cls, *, bot, num, max, page):
+        return embeds.make_embed(bot=bot, title=f"Search Results (page {num} of {max})", description=page)
 
     @classmethod
     async def make_page(cls, *, bot, result):
