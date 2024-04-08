@@ -63,7 +63,7 @@ class Configure:
         channel = await self.bot.fetch_channel(game.channel)
         config = Config.load(game.config)
         title = "Game Configuration"
-        description = repr(config)
+        description = f"id: `{game.id}`\ncreated <t:{int(game.created.timestamp())}:R>\n{repr(config)}"
 
         await interaction.response.send_message(
             embed=embeds.make_embed(self.bot, title=title, description=description), ephemeral=True
