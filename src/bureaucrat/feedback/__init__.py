@@ -40,19 +40,25 @@ class Feedback(commands.GroupCog, group_name="feedback"):
         await self.bot.send_ethereal(interaction, title="Feedback", **kwargs)
 
     @apc.command()
+    @apc.describe(game="Submit feedback for a game that has already ended.")
     @apc.describe(anonymous="Whether the storyteller can see your username on the feedback.")
-    async def submit(self, interaction: Interaction, anonymous: bool):
+    async def submit(self, interaction: Interaction, game: Optional[str], anonymous: bool):
         """
         Submit feedback for the current game's storyteller.
         """
         if not await checks.in_guild(bot=self.bot, interaction=interaction):
             return
 
-        game = await self.ensure_active(interaction)
         if game is None:
-            return
-        
-        participant = await Participant.objects.get_or_none()
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+        else:
+            game = await Game.objects.get(id=game)
+            if game is None:
+                return await self.send_ethereal(interaction, description="Could not find that game.")
+
+        participant = await Participant.objects.get_or_none(game=game, member=interaction.user.id)
         if not participant or participant.role != RoleType.PLAYER:
             await self.send_ethereal(interaction, description="You must be a player in this game to submit feedback.")
         
