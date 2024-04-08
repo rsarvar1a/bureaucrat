@@ -22,6 +22,9 @@ class Scripts(commands.GroupCog, group_name="script"):
     def __init__(self, bot: "Bureaucrat") -> None:
         self.bot = bot
 
+    async def send_ethereal(self, interaction, **kwargs):
+        await self.bot.send_ethereal(interaction, title="Scripts", **kwargs)
+
     @apc.command()
     @apc.describe(id="Enter the script's id.")
     @CONFIG.database.transaction()
@@ -35,7 +38,7 @@ class Scripts(commands.GroupCog, group_name="script"):
                 user = await self.bot.fetch_user(script.author)
                 return await interaction.response.send_message(
                     embed=embeds.unauthorized(self.bot, f"You are not the owner of this script, {user.mention} is."),
-                    ephemeral=True,
+                    delete_after=5, ephemeral=True,
                 )
             await self.bot.aws.s3_delete(bucket="scripts", prefix=script.id)
             await Document.objects.delete(script=script)
@@ -45,7 +48,7 @@ class Scripts(commands.GroupCog, group_name="script"):
 
         await interaction.response.send_message(
             embed=embeds.make_embed(self.bot, title="Script Management", description=f"Deleted script `{id}`."),
-            ephemeral=True,
+            delete_after=5, ephemeral=True,
         )
 
     @apc.command()

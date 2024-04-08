@@ -36,109 +36,6 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
         self._roles = Roles(self)
         self._signups = Signups(self)
 
-    # HELPERS
-
-    async def ensure_active(self, interaction: Interaction) -> Optional[Game]:
-        """
-        Ensures that this channel has an active game.
-        """
-        in_channel: Optional[Game] = await self.get_active_game(interaction.channel)
-        if in_channel is None:
-            await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="There is no active game in this channel."),
-                delete_after=5,
-                ephemeral=True,
-            )
-            return None
-        else:
-            return in_channel
-
-    async def ensure_active_category(self, interaction: Interaction):
-        """
-        Ensures the category allows text games.
-        """
-        category = interaction.channel.category
-        if category is None:
-            await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="You must be in a category."), delete_after=5, ephemeral=True
-            )
-            return False
-        elif await ActiveCategory.objects.get_or_none(id=category.id) is None:
-            await interaction.response.send_message(
-                embed=embeds.make_error(self.bot, message="Text games are not enabled in this category."),
-                delete_after=5,
-                ephemeral=True,
-            )
-            return False
-        return True
-
-    async def ensure_owner(self, interaction, game: Game):
-        """
-        Ensures the invoker is the owner of the current game.
-        """
-        if interaction.user.id in self.bot.owner_ids:
-            return True
-        
-        if interaction.user.id != game.owner:
-            await interaction.response.send_message(
-                embed=embeds.unauthorized(self.bot, message=f"You are not the owner of this game, <@{game.owner}> is."),
-                delete_after=5,
-                ephemeral=True,
-            )
-            return False
-        return True
-
-    async def ensure_privileged(self, interaction: Interaction, game: Game):
-        """
-        Ensures the invoker is the owner of the game or a storyteller.
-        """
-        if interaction.user.id in self.bot.owner_ids:
-            return True
-        
-        as_member = await interaction.guild.fetch_member(interaction.user.id)
-        participant = await Participant.objects.get_or_none(game=game, member=as_member.id)
-        if game.owner != as_member.id and participant.role != RoleType.STORYTELLER:
-            await interaction.response.send_message(
-                embed=embeds.unauthorized(self.bot, message="You must be a storyteller or game owner."),
-                delete_after=5,
-                ephemeral=True,
-            )
-            return False
-        return True
-
-    async def get_active_game(self, channel: GuildChannel | Thread) -> Optional[Game]:
-        """
-        Retrieves the active game, if one exists.
-        """
-        channel_id = self.get_channel_id(channel)
-        in_channel = await ActiveGame.objects.select_related(ActiveGame.game).get_or_none(id=channel_id)
-        game = in_channel.game if in_channel else None
-        return game
-
-    def get_channel_id(self, channel: GuildChannel | Thread):
-        """
-        Gets the root-channel id (either the id of the channel, or the id of the thread's parent channel if the input is a thread).
-        """
-        if isinstance(channel, GuildChannel):
-            return channel.id
-        elif isinstance(channel, Thread):
-            thread: Thread = channel
-            return thread.parent.id
-
-    async def followup_ethereal(self, interaction: Interaction, **kwargs):
-        """
-        Sends an ethereal followup.
-        """
-        await interaction.followup.send(embed=embeds.make_embed(self.bot, **kwargs), ephemeral=True)
-
-    async def send_ethereal(self, interaction: Interaction, **kwargs):
-        """
-        Sends an ethereal message, which is an autodeleting ephemeral.
-        """
-        await interaction.response.send_message(
-            embed=embeds.make_embed(self.bot, **kwargs), delete_after=5, ephemeral=True
-        )
-
     # TOP LEVEL
 
     @apc.command(name="end")
@@ -177,11 +74,11 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
     @apc.command(name="new")
     @apc.describe(name="The name of the new game's channel.")
     @apc.describe(script="The id of an existing script.")
-    async def toplevel_new(self, interaction: Interaction, name: Optional[str], script: Optional[str], seats: Optional[int]):
+    async def toplevel_new(self, interaction: Interaction, category: Optional[CategoryChannel], name: Optional[str], script: Optional[str], seats: Optional[int]):
         """
         Create a new game in an empty channel.
         """
-        await self._toplevel.new(interaction, name=name, script=script, seats=seats)
+        await self._toplevel.new(interaction, category=category, name=name, script=script, seats=seats)
 
     @apc.command(name="signup")
     async def toplevel_signup(self, interaction: Interaction):

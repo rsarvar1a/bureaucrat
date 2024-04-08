@@ -23,11 +23,11 @@ class Configure:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         config = Config.load(game.config)
@@ -53,11 +53,11 @@ class Configure:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         channel = await self.bot.fetch_channel(game.channel)

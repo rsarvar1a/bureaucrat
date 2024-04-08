@@ -51,7 +51,7 @@ class Roles:
         return player, st
 
     async def send_ethereal(self, interaction: Interaction, **kwargs):
-        await self.parent.send_ethereal(interaction, title="Roles", **kwargs)
+        await self.bot.send_ethereal(interaction, title="Roles", **kwargs)
 
     async def set_role(self, game: Game, user: Member, role: RoleType):
         """
@@ -88,10 +88,10 @@ class Roles:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        if not await self.parent.ensure_active(interaction):
+        if not await self.bot.ensure_active(interaction):
             return
 
-        channel_id = self.parent.get_channel_id(interaction.channel)
+        channel_id = self.bot.get_channel_id(interaction.channel)
         in_channel = await ActiveGame.objects.select_related(ActiveGame.game.participants).get(id=channel_id)
         members = [(await interaction.guild.fetch_member(p.member), p.role) for p in in_channel.game.participants]
 
@@ -122,11 +122,11 @@ class Roles:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         role = await Participant.objects.get_or_none(game=game, member=user.id)
@@ -143,11 +143,11 @@ class Roles:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         participant = await Participant.objects.get_or_none(game=game, member=user.id)

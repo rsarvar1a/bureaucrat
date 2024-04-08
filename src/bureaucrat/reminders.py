@@ -28,9 +28,7 @@ class Reminders(commands.GroupCog, group_name="reminders"):
         self.fire.start()
 
     async def send_ethereal(self, interaction: Interaction, **kwargs):
-        await interaction.response.send_message(
-            embed=embeds.make_embed(self.bot, title="Reminders", **kwargs), delete_after=5, ephemeral=True
-        )
+        await self.bot.send_ethereal(interaction, title="Reminders", **kwargs)
 
     @classmethod
     def parse_time(cls, time_str) -> timedelta | None:

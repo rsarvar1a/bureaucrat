@@ -16,31 +16,30 @@ class Signups:
         self.parent = parent
     
     async def send_ethereal(self, interaction: Interaction, **kwargs):
-        await self.parent.send_ethereal(interaction, title="Signups", **kwargs)
+        await self.bot.send_ethereal(interaction, title="Signups", **kwargs)
 
     async def list(self, interaction: Interaction):
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         
         signups = await Signup.objects.order_by("id").all(game=game)
         description = "\n".join(f"{i + 1}. <@{s.member}>" for i, s in enumerate(signups))
         description = description if description != "" else "There are no signups."
-
         await interaction.response.send_message(embed=embeds.make_embed(self.bot, title="Signups", description=description), ephemeral=True)
 
     async def clear(self, interaction: Interaction):
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
         
         await Signup.objects.filter(game=game).delete()
@@ -50,11 +49,11 @@ class Signups:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         config = Config.load(game.config)
@@ -79,11 +78,11 @@ class Signups:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         this_user = await Participant.objects.get_or_none(game=game, member=user.id)
@@ -107,11 +106,11 @@ class Signups:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
     
         this_signup = Signup.objects.get_or_none(game=game, member=user.id)

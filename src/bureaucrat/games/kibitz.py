@@ -16,7 +16,7 @@ class Kibitzers:
         self.parent = parent
 
     async def send_ethereal(self, interaction: Interaction, **kwargs):
-        await self.parent.send_ethereal(interaction, title="Kibitz", **kwargs)
+        await self.bot.send_ethereal(interaction, title="Kibitz", **kwargs)
 
     async def ensure_kibitz(self, interaction: Interaction, game: Game, silent=False):
         """
@@ -36,11 +36,11 @@ class Kibitzers:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         if await Kibitz.objects.get_or_none(game=game) is not None:
@@ -82,15 +82,14 @@ class Kibitzers:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         await self._cleanup(interaction, game, silent=False)
-
         await self.send_ethereal(interaction, description="Cleaned up this Kibitz's role.")
 
     async def _add(self, game: Game, user: Member):
@@ -117,11 +116,11 @@ class Kibitzers:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         kibitz = await self.ensure_kibitz(interaction, game, silent=False)
@@ -155,11 +154,11 @@ class Kibitzers:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         kibitz = await self.ensure_kibitz(interaction, game, silent=False)

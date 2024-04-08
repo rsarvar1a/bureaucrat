@@ -19,47 +19,46 @@ class Reminders:
         return self.bot.get_cog("Reminders")
 
     async def send_ethereal(self, interaction: Interaction, **kwargs):
-        await self.parent.send_ethereal(interaction, title="Reminders", **kwargs)
+        await self.bot.send_ethereal(interaction, title="Reminders", **kwargs)
 
     async def delete(self, interaction: Interaction, id: str):
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         reminder = await Reminder.objects.get_or_none(id=id)
         if reminder is None:
             return await self.send_ethereal(interaction, description=f"There is no reminder with id `{id}`.")
-
+        
         await self._reminders()._delete(interaction, reminder)
 
     async def list(self, interaction: Interaction):
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
         gamereminders = await GameReminder.objects.select_related([GameReminder.reminder, GameReminder.reminder.intervals]).all(game=game)
         reminders = [r.reminder for r in gamereminders]
-
         await self._reminders()._list(interaction, reminders)
 
     async def new(self, interaction: Interaction, message: str, duration: str, intervals: Optional[str]):
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         pinged_message = f"<@&{game.player_role}> {message}"
@@ -71,11 +70,11 @@ class Reminders:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_privileged(interaction, game):
+        if not await self.bot.ensure_privileged(interaction, game):
             return
 
         reminder = await Reminder.objects.get_or_none(id=id)

@@ -1,10 +1,12 @@
 from bureaucrat.models.configure import ormar
 from bureaucrat.models import games
-from bureaucrat.models.games import ActiveGame, Game, Config, Participant, State, Signup
+from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Config, Participant, State, Signup
 from bureaucrat.models.scripts import Script
 from bureaucrat.scripts.details import ScriptDetailsView
 from bureaucrat.utility import checks, embeds
-from discord import Interaction, Member, Thread
+from datetime import datetime
+from discord import Interaction, Member, Thread, CategoryChannel
+from sqids.sqids import Sqids
 from typing import TYPE_CHECKING, Optional
 
 from .roles import RoleType
@@ -21,10 +23,10 @@ class TopLevel:
         self.parent = parent
 
     async def followup_ethereal(self, interaction: Interaction, **kwargs):
-        await self.parent.followup_ethereal(interaction, title="Games", **kwargs)
+        await self.bot.followup_ethereal(interaction, title="Games", **kwargs)
 
     async def send_ethereal(self, interaction: Interaction, **kwargs):
-        await self.parent.send_ethereal(interaction, title="Games", **kwargs)
+        await self.bot.send_ethereal(interaction, title="Games", **kwargs)
 
     async def end(self, interaction: Interaction):
         """
@@ -33,11 +35,11 @@ class TopLevel:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_owner(interaction, game):
+        if not await self.bot.ensure_owner(interaction, game):
             return
 
         await ActiveGame.objects.filter(game=game).delete()
@@ -46,33 +48,45 @@ class TopLevel:
 
         await self.send_ethereal(interaction, description="This channel has been freed up.")
 
-    async def new(self, interaction: Interaction, *, name: Optional[str], script: Optional[str], seats: Optional[int]):
+    async def new(self, interaction: Interaction, *, category: Optional[CategoryChannel], name: Optional[str], script: Optional[str], seats: Optional[int]):
         """
         Creates a new game in the given channel.
         """
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        if await self.parent.get_active_game(interaction.channel):
-            return await self.send_ethereal(interaction, description="There is already an active game here.")
+        if category is None:
+            if await self.bot.get_active_game(interaction.channel):
+                return await self.send_ethereal(interaction, description="There is already an active game here.")
 
-        if not await self.parent.ensure_active_category(interaction):
-            return
+            if not await self.bot.ensure_active_category(interaction):
+                return
+
+            channel_id = self.bot.get_channel_id(interaction.channel)
+            channel = await interaction.guild.fetch_channel(channel_id)
+
+        else:
+            cat = await ActiveCategory.objects.get_or_none(id=category.id)
+            if cat is None:
+                return await self.send_ethereal(interaction, description="Text games are not enabled in that category.")
+            channel = await category.create_text_channel(name=f"new-channel-for-{interaction.user.name}")
 
         await interaction.response.defer(ephemeral=True)
-
-        channel_id = self.parent.get_channel_id(interaction.channel)
-        channel = await interaction.guild.fetch_channel(channel_id)
-        player_role, st_role = await self.parent._roles.prepare_channel(interaction.guild, channel)
-
+        
+        state = State()
         config = Config(name=name, script=script, seats=seats)
         name = config.name
         
-        state = State()
-
+        player_role, st_role = await self.parent._roles.prepare_channel(interaction.guild, channel)
         channel = await channel.edit(name=name)
 
+        created = datetime.now()
+        id = Sqids(min_length=8).encode([int(interaction.guild.id), int(created.timestamp())])
+
         game = await Game.objects.create(
+            id=id,
+            created=created,
+            guild=interaction.guild.id,
             channel=channel.id,
             owner=interaction.user.id,
             player_role=player_role.id,
@@ -94,7 +108,7 @@ class TopLevel:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
@@ -103,7 +117,7 @@ class TopLevel:
         else:
             match role:
                 case RoleType.PLAYER:
-                    if not await self.parent.ensure_privileged(interaction, game):
+                    if not await self.bot.ensure_privileged(interaction, game):
                         return
                     ping = f"(<@&{game.player_role}>) "
                 case RoleType.STORYTELLER:
@@ -121,7 +135,7 @@ class TopLevel:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
@@ -138,7 +152,7 @@ class TopLevel:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         
@@ -166,11 +180,11 @@ class TopLevel:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
 
-        if not await self.parent.ensure_owner(interaction, game):
+        if not await self.bot.ensure_owner(interaction, game):
             return
 
         owner = await interaction.guild.fetch_member(game.owner)
@@ -197,7 +211,7 @@ class TopLevel:
         if not await checks.in_guild(self.bot, interaction):
             return
 
-        game = await self.parent.ensure_active(interaction)
+        game = await self.bot.ensure_active(interaction)
         if game is None:
             return
         

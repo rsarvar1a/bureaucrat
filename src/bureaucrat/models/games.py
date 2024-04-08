@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from ormar import ReferentialAction
 from typing import Optional
@@ -51,7 +52,9 @@ class Game(ormar.Model):
 
     ormar_config = CONFIG.copy(tablename="games")
 
-    id: int = ormar.Integer(primary_key=True, autoincrement=True)
+    id: str = ormar.String(primary_key=True, max_length=50)
+    created: datetime = ormar.DateTime()
+    guild: int = ormar.BigInteger()
     channel: int = ormar.BigInteger()
     owner: int = ormar.BigInteger()
     player_role: int = ormar.BigInteger()
@@ -68,9 +71,7 @@ class ActiveGame(ormar.Model):
     ormar_config = CONFIG.copy(tablename="active_games")
 
     id: int = ormar.BigInteger(primary_key=True)
-    game: Game = ormar.ForeignKey(
-        Game, unique=True, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE
-    )
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
 
 
 class RoleType(Enum):
