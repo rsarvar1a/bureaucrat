@@ -72,7 +72,7 @@ class Roles(dotdict):
         emojis = [emoji for emoji in bot.emojis if emoji.name == role]
         return emojis[0] if len(emojis) > 0 else None
 
-    def make_description(self, *, bot: "Bureaucrat"):
+    def make_description(self, *, bot: "Bureaucrat", private: bool, kind: Type):
         """
         Returns a string representing this role pair.
         """
@@ -83,23 +83,24 @@ class Roles(dotdict):
 
         apparent = self.emojify(bot=bot, kind="apparent") if self.apparent else None
         apparent = (f"-{str(apparent)}" if apparent else f"-`{self.apparent}`") if self.apparent else ""
-        return f"{true}{apparent}"
+        return f"{true}{apparent if private or kind == Type.Player else ''}"
 
 
 class Seat(dotdict):
     """
     A player in the game.
     """
-    def __init__(self, *, id: Optional[str] = None, member: int, alias: str, kind: Type = Type.Player, roles = {}, status: int = Status.Alive.value):
+    def __init__(self, *, id: Optional[str] = None, member: int, alias: str, kind: int = Type.Player.value, roles = {}, status: int = Status.Alive.value):
         self.id = id if id else Sqids(min_length=8).encode([member, int(datetime.now().timestamp())])
         self.member = member
         self.alias = alias
-        self.kind = kind
+        self.kind = Type(kind)
         self.roles = Roles(**roles)
         self.status = Status(status)
 
     def make_description(self, *, bot: "Bureaucrat", private: bool = False):
-        private_text = self.roles.make_description(bot=bot)
+        private_text = self.roles.make_description(bot=bot, private=private, kind=self.kind)
+        private = private or self.kind == Type.Traveller
         return f"{str(self.status.emojify(bot=bot))} {self.alias} (<@{self.member}>){f' the {private_text}' if private else ''}"
 
 

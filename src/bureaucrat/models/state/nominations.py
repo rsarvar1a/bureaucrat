@@ -41,11 +41,11 @@ class Vote(dotdict):
             case None:
                 return ""
 
-    def make_description(self, *, indent: str = "  ", bot: "Bureaucrat", seat: Seat, nomination: "Nomination", private: bool = False, count: int, required: int):
+    def make_description(self, *, indent: str = "  ", bot: "Bureaucrat", seat: Seat, nomination: "Nomination", private: bool = False, count: int, required: int, active: bool):
         """
         Make the description for this vote.
         """
-        status = f"{self.emojify()} ({count: >2}/{required: >2}) " if self.locked is not None else ""
+        status = f"{':arrow_right: ' if active else ''}{self.emojify()} ({count: >2}/{required: >2}) " if self.locked is not None else ""
         segments = [
             f"{status}{seat.make_description(bot=bot, private=private)}",
         ]
@@ -59,7 +59,8 @@ class Vote(dotdict):
                 segments.append(f"  - vote: '{self.vote if self.vote else 'unset'}")
         else:
             segments.append("  - *ghost vote already spent*")
-        return f"\n{indent}".join(s for s in segments)
+        description = f"\n{indent}".join(s for s in segments)
+        return f"**{description}**" if active else description
 
     def set_vote(self, *, kind: NominationType, seat: Seat, vote: Optional[str], private: bool):
         """
@@ -88,7 +89,7 @@ class Nomination (dotdict):
         self.required = required
         self.voters = [Vote(**data) for data in voters]
 
-    def make_description(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, show_votes: bool = True):
+    def make_description(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, show_votes: bool = True, active: Optional[str] = None):
         nominator = state.seating.seats[state.seating.index(self.nominator)]            
         nominee = state.seating.seats[state.seating.index(self.nominee)]
         
@@ -99,12 +100,12 @@ class Nomination (dotdict):
             f"- {self.required} vote{'s' if self.required != 1 else ''} required"
         ]
         if show_votes:
-            subsegments.append(self.make_voting_log(state=state, indent=indent, bot=bot, private=private))
+            subsegments.append(self.make_voting_log(state=state, indent=indent, bot=bot, private=private, active=active))
 
         description = f"\n{indent}".join(s for s in subsegments)
         return description
 
-    def make_voting_log(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False):
+    def make_voting_log(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, active: Optional[str] = None):
         """
         Lists out the voters in this nomination, as well as their voting attributes.
         """
@@ -115,7 +116,8 @@ class Nomination (dotdict):
             seat = state.seating.seats[state.seating.index(vote.id)]
             if vote.locked == True:
                 count += 1
-            segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, bot=bot, seat=seat, nomination=self, private=private, count=count, required=required)}")
+            is_active = vote.id == active
+            segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, bot=bot, seat=seat, nomination=self, private=private, count=count, required=required, active=is_active)}")
         return f"{indent}Votes:\n" + f"\n{indent}".join(s for s in segments)
 
     def set_vote(self, *, state: "State", voter: str, vote: Optional[str], private: bool):
