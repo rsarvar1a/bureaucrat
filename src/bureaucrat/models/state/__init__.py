@@ -20,8 +20,8 @@ class State(JSONable):
     """
     The gamestate tied to a game.
     """
-    def __init__(self, *, mods: List[Mod] = [], moment = {}, seating = {}, nominations = {}, script: Optional[dict] = None):
-        self.mods = mods
+    def __init__(self, *, mods: List[int] = [], moment = {}, seating = {}, nominations = {}, script: Optional[dict] = None):
+        self.mods = [Mod(m) for m in mods]
         self.moment = Moment(**moment)
         self.seating = Seating(**seating)
         self.nominations = Nominations(**nominations)
