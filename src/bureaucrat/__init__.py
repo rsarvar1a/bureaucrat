@@ -1,13 +1,17 @@
+import logging
 import tomllib
 
-from bureaucrat import admin, archives, feedback, games, models, reminders, scripts, seating
+from discord.utils import MISSING
+
+from bureaucrat import admin, archives, feedback, games, models, phases, reminders, scripts, seating
 from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, RoleType
 from bureaucrat.utility import aws, logging, embeds
-from discord import AllowedMentions, Intents, Interaction, Thread
+from discord import AllowedMentions, Intents, Interaction, Thread, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import DefaultHelpCommand
 from discord.ext.commands.bot import Bot
 from dotmap import DotMap
+from logging import Handler, Formatter
 from typing import List, Optional
 
 
@@ -25,7 +29,7 @@ class Config:
 
 class Bureaucrat(Bot):
 
-    COG_MODULES = (admin, archives, feedback, games, reminders, scripts, seating)
+    COG_MODULES = (admin, archives, feedback, games, phases, reminders, scripts, seating)
 
     def __init__(self, *, config: Config):
 
@@ -38,7 +42,9 @@ class Bureaucrat(Bot):
 
         # Create Bureaucrat's logging handle, so that all Bureaucrat-level modules use the same label.
         severity = logging.severity(config.log_level)
-        self.logger = logging.make_logger(name="Bureaucrat", severity=severity)
+
+        self.logger, handler, formatter = logging.make_logger(name="Bureaucrat", severity=severity)
+        self._severity = severity
         self.logger.debug("Debug mode enabled.")
 
         # Initialize the underlying client.
@@ -47,7 +53,6 @@ class Bureaucrat(Bot):
             "case_insensitive": True,
             "help_command": DefaultHelpCommand(dm_help=None, dm_help_threshold=500, sort_commands=True),
             "intents": Intents.all(),
-            "log_level": severity,
         }
         super().__init__(config.prefix, **options)
         self.owner_ids = config.owners
@@ -63,6 +68,12 @@ class Bureaucrat(Bot):
         self.logger.info(f"Loading extensions: {', '.join(m.__name__.split('.')[1].capitalize() for m in Bureaucrat.COG_MODULES)}.")
         for module in Bureaucrat.COG_MODULES:
             await module.setup(self)
+
+    def run(self, token: str, *, reconnect: bool = True) -> None:
+        
+        return super().run(token, reconnect=reconnect, log_level=self._severity + 10)
+
+    # HELPERS
 
     async def ensure_active(self, interaction: Interaction) -> Optional[Game]:
         """

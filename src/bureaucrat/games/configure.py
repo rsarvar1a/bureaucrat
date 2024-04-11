@@ -7,7 +7,6 @@ from bureaucrat.models import games
 from bureaucrat.models.games import ActiveGame, Game
 from bureaucrat.utility import checks, embeds
 from discord import Interaction
-from scriptmaker import Datastore, Script
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING
 from urllib.request import urlretrieve
@@ -50,36 +49,7 @@ class Configure:
 
         # Handle script updates specifically as well.
         if "script" in kwargs and kwargs["script"] is not None:
-            with TemporaryDirectory() as workspace:
-                with NamedTemporaryFile() as f:
-                    try:
-                        script_url = self.bot.aws.s3_url(bucket="scripts", key=kwargs["script"], stem="script.json")
-                        urlretrieve(script_url, f.name)
-                        script_json = json.load(f)
-
-                        with NamedTemporaryFile() as g:
-                            try:
-                                nights_url = self.bot.aws.s3_url(bucket="scripts", key=kwargs["script"], stem="nights.json")
-                                urlretrieve(nights_url, g.name)
-                                nights_json = json.load(g)
-                            except:
-                                nights_json = None
-                        
-                        state = State.load(game.state)
-
-                        datastore = Datastore(workspace=workspace)
-                        datastore.add_official_characters()
-                        script = datastore.load_script(script_json, nights_json)
-                        script.finalize()
-
-                        state.script = [{k: v for k, v in script.meta.__dict__.items() if k != "icon"}]
-                        for character in script.characters:
-                            state.script.append(character.__dict__)
-                        state.nights = script.nightorder
-
-                        game.state = state.dump()
-                    except Exception as e:
-                        self.bot.logger.error(e)
+            await self.parent.add_script_to_state(game, kwargs['script'])
 
         await game.update()
         await self.show(interaction)

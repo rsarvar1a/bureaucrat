@@ -17,3 +17,10 @@ class Moment(dotdict):
     def __init__(self, *, day: int = 1, phase: int = Phase.Night.value):
         self.day = day
         self.phase = Phase(phase)
+
+    def go_to_dusk(self):
+        self.day += 1
+        self.phase = Phase.Night
+    
+    def go_to_dawn(self):
+        self.phase = Phase.Day

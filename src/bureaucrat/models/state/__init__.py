@@ -44,6 +44,7 @@ class State(JSONable):
 
         special = ["DUSK", "DEMON", "MINION", "DAWN"]
 
+        key = night
         night = self.nights[night]
         night = [
             [
