@@ -98,6 +98,10 @@ class Seat(dotdict):
         self.roles = Roles(**roles)
         self.status = Status(status)
 
+    def make_description(self, *, bot: "Bureaucrat", private: bool = False):
+        private_text = self.roles.make_description(bot=bot)
+        return f"{str(self.status.emojify(bot=bot))} {self.alias} (<@{self.member}>){f' the {private_text}' if private else ''}"
+
 
 class Seating(dotdict):
     """
@@ -113,6 +117,13 @@ class Seating(dotdict):
         """
         indices = [i for i, seat in enumerate(self.seats) if seat.id == id]
         return indices[0] if len(indices) > 0 else None
+
+    def member_to_id(self, user_id: int):
+        """
+        Gets the id of the seat corresponding to the given member.
+        """
+        seats = [seat.id for seat in self.seats if seat.member == user_id]
+        return seats[0] if len(seats) > 0 else None
 
     def move_seats(self, *, lhs: str, rhs: Optional[str] = None, mode: Marker) -> bool:
         """
@@ -242,6 +253,17 @@ class Seating(dotdict):
         
         segments = []
         for i, seat in enumerate(self.seats):
-            private_text = seat.roles.make_description(bot=bot)
-            segments.append(f"{i + 1}. {str(seat.status.emojify(bot=bot))} {seat.alias} (<@{seat.member}>){f' the {private_text}' if private else ''}")
+            segments.append(f"{i + 1}. {seat.make_description(bot=bot, private=private)}")
         return "\n".join(s for s in segments)
+
+    def get_required_votes_for(self, kind: Type):
+        """
+        A player requires half of all alive players. A traveller requires half of all players.
+        """
+        match kind:
+            case Type.Traveller:
+                count = len(self.seats)
+                return (count + 1) // 2
+            case Type.Player:
+                alive = len([seat for seat in self.seats if seat.status == Status.Alive])
+                return (alive + 1) // 2

@@ -3,7 +3,7 @@ import tomllib
 
 from discord.utils import MISSING
 
-from bureaucrat import admin, archives, feedback, games, models, phases, reminders, scripts, seating
+from bureaucrat import admin, archives, feedback, games, models, nominations, phases, reminders, scripts, seating
 from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, RoleType
 from bureaucrat.utility import aws, logging, embeds
 from discord import AllowedMentions, Intents, Interaction, Thread, utils
@@ -29,7 +29,7 @@ class Config:
 
 class Bureaucrat(Bot):
 
-    COG_MODULES = (admin, archives, feedback, games, phases, reminders, scripts, seating)
+    COG_MODULES = (admin, archives, feedback, games, nominations, phases, reminders, scripts, seating)
 
     def __init__(self, *, config: Config):
 
@@ -70,7 +70,7 @@ class Bureaucrat(Bot):
             await module.setup(self)
 
     def run(self, token: str, *, reconnect: bool = True) -> None:
-        
+
         return super().run(token, reconnect=reconnect, log_level=self._severity + 10)
 
     # HELPERS

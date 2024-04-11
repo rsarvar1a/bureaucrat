@@ -1,0 +1,270 @@
+
+from bureaucrat.models import CONFIG
+from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType
+from bureaucrat.models.state import Marker, Phase, State, Seat, Status, Type
+from bureaucrat.utility import checks, embeds
+from datetime import datetime, timedelta
+from discord import app_commands as apc, Interaction, Member, TextChannel, Thread
+from discord.ext import commands, tasks
+from discord.ext.commands import Context
+from typing import TYPE_CHECKING, Optional, List, Dict
+
+if TYPE_CHECKING:
+    from bureaucrat import Bureaucrat
+
+
+async def setup(bot):
+    await bot.add_cog(Nominations(bot))
+
+
+class Nominations(commands.GroupCog, group_name="nominations"):
+
+    def __init__(self, bot: "Bureaucrat") -> None:
+        self.bot = bot
+
+    async def followup_ethereal(self, interaction: Interaction, **kwargs):
+        await self.bot.followup_ethereal(interaction, title="Nominations", **kwargs)
+
+    async def send_ethereal(self, interaction: Interaction, **kwargs):
+        await self.bot.send_ethereal(interaction, title="Nominations", **kwargs)
+
+    # AUTOCOMPLETES
+
+    async def autocomplete(self, interaction: Interaction, current: str):
+        """
+        Returns a list of all players, for contexts where the day is unclear.
+        """
+        channel_id = self.bot.get_channel_id(interaction.channel)
+        in_channel = await ActiveGame.objects.select_related(ActiveGame.game).get_or_none(id=channel_id)
+        if in_channel is None:
+            return []
+        game = in_channel.game
+        state = State.load(game.state)
+        return [apc.Choice(name=seat.alias, value=seat.id) for seat in state.seating.seats if current.lower() in seat.alias.lower()]        
+
+    async def valid_nominees(self, interaction: Interaction, current: str):
+        """
+        Returns a list of players that can still be nominated today.
+        """
+        channel_id = self.bot.get_channel_id(interaction.channel)
+        in_channel = await ActiveGame.objects.select_related(ActiveGame.game).get_or_none(id=channel_id)
+        if in_channel is None:
+            return []
+        game = in_channel.game
+        state = State.load(game.state)
+
+        unnominated = [seat for seat in state.seating.seats if not any(nom.nominee == seat.id for nom in state.nominations.get_nominations(state.moment.day))]
+        return [apc.Choice(name=seat.alias, value=seat.id) for seat in unnominated if current.lower() in seat.alias.lower()]
+    
+    async def existing_nominees(self, interaction: Interaction, current: str):
+        """
+        Returns a list of players that have already been nominated today.
+        """
+        channel_id = self.bot.get_channel_id(interaction.channel)
+        in_channel = await ActiveGame.objects.select_related(ActiveGame.game).get_or_none(id=channel_id)
+        if in_channel is None:
+            return []
+        game = in_channel.game
+        state = State.load(game.state)
+
+        nominated = [seat for seat in state.seating.seats if any(nom.nominee == seat.id for nom in state.nominations.get_nominations(state.moment.day))]
+        return [apc.Choice(name=seat.alias, value=seat.id) for seat in nominated if current.lower() in seat.alias.lower()]
+
+    # COMMANDS
+
+    @apc.command()
+    @apc.describe(day="Show all nominations that occurred on a particular day. Defaults to the current day.")
+    async def list(self, interaction: Interaction, day: Optional[int]):
+        """
+        Show all nominations occurring on a particular day.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        game = await self.bot.ensure_active(interaction)
+        if game is None:
+            return
+
+        await self._list(interaction, game, day)
+
+    async def _list(self, interaction: Interaction, game: Game, day: Optional[int] = None):
+        state = State.load(game.state)
+
+        user_id = interaction.user.id
+        participant = await Participant.objects.get_or_none(game=game, member=user_id)        
+        private = (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
+
+        description = state.nominations.make_page(bot=self.bot, day=day, state=state, private=private)
+        await interaction.response.send_message(embed=embeds.make_embed(self.bot, title="Nominations", description=description), ephemeral=True)
+
+    @apc.command()
+    @apc.autocomplete(nominee=autocomplete)
+    @apc.describe(nominee="The player that was nominated.")
+    @apc.describe(day="The day on which to search for nominations. Defaults to the current day.")
+    async def show(self, interaction: Interaction, nominee: str, day: Optional[int]):
+        """
+        Show information on a specific nomination.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        game = await self.bot.ensure_active(interaction)
+        if game is None:
+            return
+        
+        await self._show(interaction, game, nominee, day)
+    
+    async def _show(self, interaction: Interaction, game: Game, nominee: str, day: Optional[int], *, followup: bool = False):
+        state = State.load(game.state)
+
+        user_id = interaction.user.id
+        participant = await Participant.objects.get_or_none(game=game, member=user_id)        
+        private = (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
+
+        day = day if day is not None else state.moment.day
+        nomination = state.nominations.get_specific_nomination(day, nominee)
+     
+        if nomination is None:
+            description = "There is no such nomination."
+        else:
+            description = nomination.make_description(indent="", bot=self.bot, state=state, private=private, show_votes=True)
+
+        if followup:
+            await interaction.followup.send(embed=embeds.make_embed(self.bot, title="Nominations", description=description), ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=embeds.make_embed(self.bot, title="Nominations", description=description), ephemeral=True)
+
+    # NOMINATION
+
+    @apc.command()
+    @apc.autocomplete(nominee=valid_nominees)
+    @apc.describe(nominee="The player you wish to nominate.")
+    async def nominate(self, interaction: Interaction, nominee: str):
+        """
+        Nominate a player.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            await interaction.response.defer(ephemeral=True)
+
+            state = State.load(game.state)
+
+            nominator = state.seating.member_to_id(interaction.user.id)
+            error = state.nominations.create(state=state, nominator=nominator, nominee=nominee)
+            if error:
+                return await self.followup_ethereal(interaction, description=error)    
+
+            nominee = state.seating.seats[state.seating.index(nominee)]
+
+            game.state = state.dump()
+            await game.update()            
+
+        channel = self.bot.get_channel(game.channel) or await interaction.guild.fetch_channel(game.channel)
+        await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n{interaction.user.mention} has nominated <@{nominee.member}>.")
+
+        await self._show(interaction, game, nominee, None, followup=True)
+
+    @apc.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nomination to edit.")
+    @apc.describe(required="The number of yes votes required to pass this nomination.")
+    async def edit(self, interaction: Interaction, nominee: str, required: Optional[int]):
+        """
+        Edit an existing nomination.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+            
+            if not await self.bot.ensure_privileged(interaction, game):
+                return
+            
+            state = State.load(game.state)
+            nomination = state.nominations.get_specific_nomination(state.moment.day, nominee)
+            if not nomination:
+                return await self.send_ethereal(interaction, description="There is no such nomination.")
+
+            if required:
+                nomination.required = required
+
+            game.state = state.dump()
+            await game.update()
+        
+        await self._show(interaction, game, nominee, None)
+
+    # PLAYER VOTES
+
+    votes = apc.Group(name="vote", description="Vote on open nominations.")
+
+    @votes.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nominee you wish to vote on.")
+    @apc.describe(vote="Your vote or conditional.")
+    @apc.describe(private="Whether this vote is private or public. Defaults to public.")
+    async def set(self, interaction: Interaction, nominee: str, vote: str, private: Optional[bool]):
+        """
+        Vote on one of today's existing nominations.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            state = State.load(game.state)
+
+            voter = state.seating.member_to_id(interaction.user.id)
+            if voter is None:
+                return await self.send_ethereal(interaction, description="You are not seated in this game.")
+
+            error = state.nominations.set_vote(state=state, voter=voter, nominee=nominee, vote=vote, private=private if private is not None else False)  
+            if error:
+                return await self.send_ethereal(interaction, description=error)    
+
+            game.state = state.dump()
+            await game.update()            
+
+        await self._show(interaction, game, nominee, None)
+
+    @votes.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nominee you wish to remove your vote from.")
+    @apc.describe(private="Whether you want to remove your private or public vote. Defaults to public.")
+    async def remove(self, interaction: Interaction, nominee: str, private: Optional[bool]):
+        """
+        Unvote on one of today's existing nominations.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            state = State.load(game.state)
+
+            voter = state.seating.member_to_id(interaction.user.id)
+            if voter is None:
+                return await self.send_ethereal(interaction, description="You are not seated in this game.")
+
+            error = state.nominations.set_vote(state=state, voter=voter, nominee=nominee, vote=None, private=private if private is not None else False)  
+            if error:
+                return await self.send_ethereal(interaction, description=error)    
+
+            game.state = state.dump()
+            await game.update()            
+
+        await self._show(interaction, game, nominee, None)

@@ -51,7 +51,7 @@ class Phases(commands.GroupCog, group_name="phases"):
     nights = apc.Group(name="nights", description="Generate your night orders inside of Discord.")
 
     @nights.command()
-    @apc.describe(filter="If you are a Storyteller, display only roles that are in-play.")
+    @apc.describe(filter="If you are a Storyteller, display only roles that are in-play. Defaults to true.")
     async def first(self, interaction: Interaction, filter: Optional[bool]):
         """
         Generate the nightorder for the first night, including any apparent roles.
@@ -77,8 +77,8 @@ class Phases(commands.GroupCog, group_name="phases"):
         await interaction.followup.send(embed=embeds.make_embed(self.bot, title="First Night", description=page), ephemeral=True)
     
     @nights.command()
-    @apc.describe(filter="If you are a Storyteller, display only roles that are in-play.")
-    async def other(self, interaction: Interaction, filter: bool):
+    @apc.describe(filter="If you are a Storyteller, display only roles that are in-play. Defaults to true.")
+    async def other(self, interaction: Interaction, filter: Optional[bool]):
         """
         Generate the nightorder for the next nights, including any apparent roles.
         """
