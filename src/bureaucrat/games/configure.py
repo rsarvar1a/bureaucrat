@@ -1,9 +1,15 @@
+import json
+
+from bureaucrat.models.config import Config
+from bureaucrat.models.state import State
 from bureaucrat.models.configure import ormar
 from bureaucrat.models import games
-from bureaucrat.models.games import ActiveGame, Game, Config, State
+from bureaucrat.models.games import ActiveGame, Game
 from bureaucrat.utility import checks, embeds
 from discord import Interaction
+from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
+from urllib.request import urlretrieve
 
 if TYPE_CHECKING:
     from bureaucrat import Bureaucrat
@@ -31,12 +37,9 @@ class Configure:
             return
 
         config = Config.load(game.config)
-
         non_null = {k: v for k, v in kwargs.items() if v is not None}
         config.__dict__.update(**non_null)
-
         game.config = config.dump()
-        await game.update()
 
         # Handle this side effect explicitly.
         if "name" in kwargs and kwargs["name"] is not None:
@@ -44,6 +47,20 @@ class Configure:
             channel = await self.bot.fetch_channel(channel_id)
             await channel.edit(name=kwargs["name"])
 
+        # Handle script updates specifically as well.
+        if "script" in kwargs and kwargs["script"] is not None:
+            with NamedTemporaryFile() as f:
+                try:
+                    script_url = self.bot.aws.s3_url(bucket="scripts", key=kwargs["script"], stem="script.json")
+                    urlretrieve(script_url, f.name)
+                    
+                    state = State.load(game.state)
+                    state.script = json.load(f)
+                    game.state = state.dump()
+                except:
+                    pass
+
+        await game.update()
         await self.show(interaction)
 
     async def show(self, interaction: Interaction):

@@ -1,9 +1,8 @@
 from datetime import datetime
 from enum import Enum
 from ormar import ReferentialAction
-from typing import Optional
 
-from .configure import CONFIG, DictType, JSONable, ormar
+from .configure import CONFIG, DictType, ormar
 from .reminders import Reminder
 
 
@@ -17,32 +16,6 @@ class ActiveCategory(ormar.Model):
 
     id: int = ormar.BigInteger(primary_key=True)
     guild: int = ormar.BigInteger()
-
-
-class Config(JSONable):
-    """
-    The configuration of a game.
-    """
-
-    def __init__(self, *, name: Optional[str], script: Optional[str], seats: int):
-        self.name = name if name else "new-game"
-        self.script = script
-        self.seats = seats if seats else 12
-
-    def __repr__(self):
-        return "\n".join([
-            f"script: `{self.script}`",
-            f"{self.seats} players"
-        ])
-
-
-class State(JSONable):
-    """
-    The gamestate tied to a game.
-    """
-
-    def __init__(self):
-        pass
 
 
 class Game(ormar.Model):
@@ -75,7 +48,9 @@ class ActiveGame(ormar.Model):
 
 
 class RoleType(Enum):
-
+    """
+    The position of the user in the game (rather than the role as in character token they were dealt).
+    """
     PLAYER = "Player"
     STORYTELLER = "Storyteller"
     NONE = "None"

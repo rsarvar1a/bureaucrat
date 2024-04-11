@@ -1,4 +1,5 @@
-from bureaucrat.models.games import Signup, Config, Participant, RoleType
+from bureaucrat.models.config import Config
+from bureaucrat.models.games import Signup, Participant, RoleType
 from bureaucrat.utility import checks, embeds
 from discord import Interaction, Member
 from enum import Enum

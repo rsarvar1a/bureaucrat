@@ -1,6 +1,8 @@
+from bureaucrat.models.config import Config
+from bureaucrat.models.state import State
 from bureaucrat.models.configure import ormar
 from bureaucrat.models import games
-from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Config, Participant, State, Signup
+from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, Signup
 from bureaucrat.models.scripts import Script
 from bureaucrat.scripts.details import ScriptDetailsView
 from bureaucrat.utility import checks, embeds
