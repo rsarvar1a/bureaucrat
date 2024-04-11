@@ -91,7 +91,7 @@ class Seating(commands.GroupCog, group_name="seating"):
             players = await Participant.objects.all(game=game, role=RoleType.PLAYER)
             for player in players:
                 as_member = interaction.guild.get_member(player.member) or await interaction.guild.fetch_member(player.member)
-                state.seating.add_player(user=as_member, kind=Type.Player, role=None)
+                state.seating.add_player(user=as_member, kind=Type.Player, role=None, apparent=None)
             
             game.state = state.dump()
             await game.update()
@@ -100,7 +100,10 @@ class Seating(commands.GroupCog, group_name="seating"):
 
     @apc.command()
     @apc.describe(user="The player to add to the seating. This also adds them as a participant.")
-    async def add(self, interaction: Interaction, user: Member, kind: Type, role: Optional[str]):
+    @apc.describe(kind="Whether the player is a traveller or not.")
+    @apc.describe(true_role="The true character of this player, as its id in the script.")
+    @apc.describe(apparent_role="The character this player believes they are, if not the same as the true role.")
+    async def add(self, interaction: Interaction, user: Member, kind: Type, true_role: Optional[str], apparent_role: Optional[str]):
         """
         Adds a player to the seating.
         """
@@ -119,7 +122,7 @@ class Seating(commands.GroupCog, group_name="seating"):
 
             state = State.load(game.state)
 
-            state.seating.add_player(user=user, kind=kind, role=role)
+            state.seating.add_player(user=user, kind=kind, role=true_role, apparent=apparent_role)
 
             p = await Participant.objects.get_or_create({"role": RoleType.PLAYER}, game=game, member=user.id)
             await p[0].update(role=RoleType.PLAYER)
@@ -199,7 +202,7 @@ class Seating(commands.GroupCog, group_name="seating"):
     @apc.command()
     @apc.autocomplete(first=autocomplete, other=autocomplete)
     @apc.describe(first="The first player in the pair to swap.")
-    @apc.describe(other="The other player in the pair to swap. Should not be the same as the first player.")
+    @apc.describe(other="The other player in the pair to swap.")
     async def swap(self, interaction: Interaction, first: str, other: str):
         """
         Swaps two players in the seating order.
@@ -230,8 +233,9 @@ class Seating(commands.GroupCog, group_name="seating"):
     @apc.autocomplete(player=autocomplete)
     @apc.describe(player="The player to edit.")
     @apc.describe(status="The player's status as it would appear on their life token.")
-    @apc.describe(role="The player's character token.")
-    async def edit(self, interaction: Interaction, player: str, status: Optional[Status], role: Optional[str]):
+    @apc.describe(true_role="The true character of this player, as its id in the script.")
+    @apc.describe(apparent_role="The character this player believes they are, if not the same as the true role.")
+    async def edit(self, interaction: Interaction, player: str, status: Optional[Status], true_role: Optional[str], apparent_role: Optional[str]):
         """
         Edits a player's info in the seating order.
         """
@@ -250,10 +254,8 @@ class Seating(commands.GroupCog, group_name="seating"):
 
             state = State.load(game.state)
 
-            if role:
-                state.seating.set_role(id=player, role=role)
-            if status:
-                state.seating.set_status(id=player, status=status)
+            state.seating.set_role(id=player, true=true_role, apparent=apparent_role)
+            state.seating.set_status(id=player, status=status)
 
             game.state = state.dump()
             await game.update()
@@ -294,7 +296,7 @@ class Seating(commands.GroupCog, group_name="seating"):
     @move.command()
     @apc.autocomplete(player=autocomplete, before=autocomplete)
     @apc.describe(player="The player to move.")
-    @apc.describe(before="The player to move the first one before.")
+    @apc.describe(before="The player to move before.")
     async def before(self, interaction: Interaction, player: str, before: str):
         """
         Move a player right before another player.
@@ -324,7 +326,7 @@ class Seating(commands.GroupCog, group_name="seating"):
     @move.command()
     @apc.autocomplete(player=autocomplete, after=autocomplete)
     @apc.describe(player="The player to move.")
-    @apc.describe(after="The player to move the first one after.")
+    @apc.describe(after="The player to move after.")
     async def after(self, interaction: Interaction, player: str, after: str):
         """
         Move a player right after another player.
@@ -379,3 +381,57 @@ class Seating(commands.GroupCog, group_name="seating"):
             await game.update()
         
         await self._show(interaction, game, followup=True)
+
+    nights = apc.Group(name="nights", description="Generate your night orders inside of Discord.")
+
+    @nights.command()
+    @apc.describe(filter="If you are a Storyteller, display only roles that are in-play.")
+    async def first(self, interaction: Interaction, filter: Optional[bool]):
+        """
+        Returns the nightorder for the first night, including any apparent roles.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        game = await self.bot.ensure_active(interaction)
+        if game is None:
+            return
+        
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = interaction.user.id
+        participant = await Participant.objects.get_or_none(game=game, member=user_id)
+        
+        private = (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
+        filter = (filter if filter is not None else True) and private
+
+        state = State.load(game.state)
+        page = state.make_nightorder(bot=self.bot, night="first", filter=filter, private=private)
+
+        await interaction.followup.send(embed=embeds.make_embed(self.bot, title="First Night", description=page), ephemeral=True)
+    
+    @nights.command()
+    @apc.describe(filter="If you are a Storyteller, display only roles that are in-play.")
+    async def other(self, interaction: Interaction, filter: bool):
+        """
+        Returns the nightorder for the next nights, including any apparent roles.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        game = await self.bot.ensure_active(interaction)
+        if game is None:
+            return
+        
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = interaction.user.id
+        participant = await Participant.objects.get_or_none(game=game, member=user_id)
+
+        private = (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
+        filter = (filter if filter is not None else True) and private
+
+        state = State.load(game.state)
+        page = state.make_nightorder(bot=self.bot, night="other", filter=filter, private=private)
+
+        await interaction.followup.send(embed=embeds.make_embed(self.bot, title="Other Nights", description=page), ephemeral=True)

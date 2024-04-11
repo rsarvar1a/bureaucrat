@@ -4,7 +4,7 @@ from difflib import SequenceMatcher
 from discord import Member, PartialEmoji, SelectOption
 from enum import IntEnum
 from sqids.sqids import Sqids
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from bureaucrat import Bureaucrat
@@ -50,29 +50,53 @@ class Type(IntEnum):
     Traveller = 2
 
 
+class Roles(dotdict):
+    """
+    The true and apparent characters attached to a seat.
+    """
+    def __init__(self, *, true: Optional[str] = None, apparent: Optional[str] = None):
+        self.true = true
+        self.apparent = apparent
+
+    def emojify(self, *, bot: "Bureaucrat", kind: Literal["true", "apparent"]):
+        """
+        Determines if there is a suitable emoji representing this role.
+        """
+        role = self[kind]
+
+        # Try standards first.
+        emojis = [emoji for emoji in bot.emojis if emoji.name == role and emoji.guild.id in bot.config.emoji.guilds]
+        if len(emojis) > 0:
+            return emojis[0]
+        
+        emojis = [emoji for emoji in bot.emojis if emoji.name == role]
+        return emojis[0] if len(emojis) > 0 else None
+
+    def make_description(self, *, bot: "Bureaucrat"):
+        """
+        Returns a string representing this role pair.
+        """
+        true = self.emojify(bot=bot, kind="true") if self.true else None
+        true = (f"{str(true)}" if true else f"`{self.true}`") if self.true else None
+        if not true:
+            return "unknown role"
+
+        apparent = self.emojify(bot=bot, kind="apparent") if self.apparent else None
+        apparent = (f"-{str(apparent)}" if apparent else f"-`{self.apparent}`") if self.apparent else ""
+        return f"{true}{apparent}"
+
+
 class Seat(dotdict):
     """
     A player in the game.
     """
-    def __init__(self, *, id: Optional[str] = None, member: int, alias: str, kind: Type = Type.Player, role: Optional[str] = None, status: int = Status.Alive.value):
+    def __init__(self, *, id: Optional[str] = None, member: int, alias: str, kind: Type = Type.Player, roles = {}, status: int = Status.Alive.value):
         self.id = id if id else Sqids(min_length=8).encode([member, int(datetime.now().timestamp())])
         self.member = member
         self.alias = alias
         self.kind = kind
-        self.role = role
+        self.roles = Roles(**roles)
         self.status = Status(status)
-
-    def emojify(self, *, bot: "Bureaucrat"):
-        """
-        Determines if there is a suitable emoji representing this role.
-        """
-        # Try standards first.
-        emojis = [emoji for emoji in bot.emojis if emoji.name == self.role and emoji.guild.id in bot.config.emoji.guilds]
-        if len(emojis) > 0:
-            return emojis[0]
-        
-        emojis = [emoji for emoji in bot.emojis if emoji.name == self.role]
-        return emojis[0] if len(emojis) > 0 else None
 
 
 class Seating(dotdict):
@@ -149,7 +173,7 @@ class Seating(dotdict):
         self.seats[l].alias = alias
         return True
 
-    def set_role(self, *, id: str, role: Optional[str]):
+    def set_role(self, *, id: str, true: Optional[str], apparent: Optional[str]):
         """
         Sets the role of the given player.
         """
@@ -157,10 +181,13 @@ class Seating(dotdict):
         if l is None:
             return False
         
-        self.seats[l].role = role
+        if true:
+            self.seats[l].roles.true = true
+        if apparent:
+            self.seats[l].roles.apparent = apparent
         return True
 
-    def set_status(self, *, id: str, status: Status):
+    def set_status(self, *, id: str, status: Optional[Status]):
         """
         Sets the life/death status of a seat.
         """
@@ -168,17 +195,18 @@ class Seating(dotdict):
         if l is None:
             return False
         
-        self.seats[l].status = status
+        if status:
+            self.seats[l].status = status
         return True
     
-    def add_player(self, *, user: Member, kind: Type, role: Optional[str]):
+    def add_player(self, *, user: Member, kind: Type, role: Optional[str], apparent: Optional[str]):
         """
         Adds a player to the seating, provided they are not already in a seat.
         """
         if any(seat.member == user.id for seat in self.seats):
             return False
         
-        seat = Seat(member=user.id, alias=user.display_name, kind=kind, role=role)
+        seat = Seat(member=user.id, alias=user.display_name, kind=kind, roles={"true": role, "apparent": apparent})
         self.seats.append(seat)
         return True
 
@@ -214,7 +242,6 @@ class Seating(dotdict):
         
         segments = []
         for i, seat in enumerate(self.seats):
-            role_emoji = seat.emojify(bot=bot)
-            private_text = (f" the {str(role_emoji)}" if role_emoji else f" the `{seat.role}`") if seat.role else ": no role"
-            segments.append(f"{i + 1}. {str(seat.status.emojify(bot=bot))} {seat.alias} (<@{seat.member}>){private_text if private else ''}")
+            private_text = seat.roles.make_description(bot=bot)
+            segments.append(f"{i + 1}. {str(seat.status.emojify(bot=bot))} {seat.alias} (<@{seat.member}>){f' the {private_text}' if private else ''}")
         return "\n".join(s for s in segments)
