@@ -377,4 +377,3 @@ class Nominations(commands.GroupCog, group_name="nominations"):
 
         await self._show(interaction, game, nominee, None)
 
-

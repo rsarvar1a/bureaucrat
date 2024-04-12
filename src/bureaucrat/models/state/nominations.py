@@ -62,7 +62,7 @@ class Vote(dotdict):
         """
         Make the description for this vote.
         """
-        status = f"{':arrow_right: ' if active else ''}{str(self.emojify(bot=bot))} (`{count: >2}`/`{required: >2}`) " if self.locked is not None else ""
+        status = f"{':arrow_right: ' if active else ''}{str(self.emojify(bot=bot))}  (`{count: >2}`/`{required: >2}`)  " if self.locked is not None else ""
         segments = [
             f"{status}{seat.make_description(bot=bot, private=private) if seat else '(removed player)'}",
         ]
@@ -143,7 +143,7 @@ class Nomination (dotdict):
                 count += vote.locked.value
             is_active = vote.id == active
             segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, kind=self.kind, bot=bot, seat=seat, nomination=self, private=private, count=count, required=required, active=is_active)}")
-        return f"{indent}Votes:\n" + f"\n{indent}".join(s for s in segments)
+        return f"\n{indent}Votes:\n" + f"\n{indent}".join(s for s in segments)
 
     def set_vote(self, *, state: "State", voter: str, vote: Optional[str], private: bool):
         """
