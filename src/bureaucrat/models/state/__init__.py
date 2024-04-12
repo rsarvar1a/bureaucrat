@@ -58,7 +58,7 @@ class State(JSONable):
 
         segments = []
         for i, pair in enumerate(nights):
-            role_string = Roles(true=pair[0]).make_description(bot=bot)
+            role_string = Roles(true=pair[0]).make_description(bot=bot, kind=Type.Player, private=True)
             target = f" for {pair[1].status.emojify(bot=bot)} {pair[1].alias} (<@{pair[1].member}>)" if private and pair[1] else ""
             segments.append(f"{i + 1}. {role_string}{target}")
         

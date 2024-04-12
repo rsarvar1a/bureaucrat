@@ -1,7 +1,7 @@
 
 from bureaucrat.models import CONFIG
 from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType
-from bureaucrat.models.state import Marker, Phase, State, Seat, Status, Type
+from bureaucrat.models.state import VoteResult, Marker, Phase, State, Seat, Status, Type
 from bureaucrat.utility import checks, embeds
 from datetime import datetime, timedelta
 from discord import app_commands as apc, Interaction, Member, TextChannel, Thread
@@ -41,6 +41,20 @@ class Nominations(commands.GroupCog, group_name="nominations"):
         game = in_channel.game
         state = State.load(game.state)
         return [apc.Choice(name=seat.alias, value=seat.id) for seat in state.seating.seats if current.lower() in seat.alias.lower()]        
+
+    async def valid_nominators(self, interaction: Interaction, current: str):
+        """
+        Returns a list of players that can still nominate today.
+        """
+        channel_id = self.bot.get_channel_id(interaction.channel)
+        in_channel = await ActiveGame.objects.select_related(ActiveGame.game).get_or_none(id=channel_id)
+        if in_channel is None:
+            return []
+        game = in_channel.game
+        state = State.load(game.state)
+
+        unnominated = [seat for seat in state.seating.seats if not any(nom.nominator == seat.id for nom in state.nominations.get_nominations(state.moment.day))]
+        return [apc.Choice(name=seat.alias, value=seat.id) for seat in unnominated if current.lower() in seat.alias.lower()]
 
     async def valid_nominees(self, interaction: Interaction, current: str):
         """
@@ -160,15 +174,48 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             if error:
                 return await self.followup_ethereal(interaction, description=error)    
 
-            nominee = state.seating.seats[state.seating.index(nominee)]
+            nominee_seat = state.seating.seats[state.seating.index(nominee)]
 
             game.state = state.dump()
             await game.update()            
 
         channel = self.bot.get_channel(game.channel) or await interaction.guild.fetch_channel(game.channel)
-        await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n{interaction.user.mention} has nominated <@{nominee.member}>.")
+        await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n{interaction.user.mention} has nominated <@{nominee_seat.member}>.")
 
         await self._show(interaction, game, nominee, None, followup=True)
+
+    @apc.command()
+    @apc.autocomplete(nominator=valid_nominators, nominee=valid_nominees)
+    @apc.describe(nominator="The nominating player.")
+    @apc.describe(nominee="The nominated player.")
+    async def create(self, interaction: Interaction, nominator: str, nominee: str):
+        """
+        Manually create a nomination as the ST.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            await interaction.response.defer(ephemeral=True)
+
+            state = State.load(game.state)
+
+            error = state.nominations.create(state=state, nominator=nominator, nominee=nominee)
+            if error:
+                return await self.followup_ethereal(interaction, description=f"Proxy nomination failed: `{error}`.")    
+
+            nominator_seat = state.seating.seats[state.seating.index(nominator)]
+            nominee_seat = state.seating.seats[state.seating.index(nominee)]
+
+            game.state = state.dump()
+            await game.update()            
+
+        channel = self.bot.get_channel(game.channel) or await interaction.guild.fetch_channel(game.channel)
+        await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n<@{nominator_seat.member}> has nominated <@{nominee_seat.member}>.")
 
     @apc.command()
     @apc.autocomplete(nominee=existing_nominees)
@@ -268,3 +315,66 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             await game.update()            
 
         await self._show(interaction, game, nominee, None)
+
+    @votes.command()
+    @apc.autocomplete(nominee=existing_nominees, voter=autocomplete)
+    @apc.describe(nominee="The nominated player.")
+    @apc.describe(voter="The player to lock the vote on.")
+    @apc.describe(result="The value of the player's vote.")
+    async def lock(self, interaction: Interaction, nominee: str, voter: str, result: VoteResult):
+        """
+        Lock a player's vote.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            if not await self.bot.ensure_privileged(interaction, game):
+                return
+
+            state = State.load(game.state)
+
+            error = state.nominations.lock_vote(state=state, nominee=nominee, voter=voter, result=result)
+            if error:
+                return await self.send_ethereal(interaction, description=f"Failed to lock: `{error}`.")
+
+            game.state = state.dump()
+            await game.update()            
+
+        await self._show(interaction, game, nominee, None)
+
+    @votes.command()
+    @apc.autocomplete(nominee=existing_nominees, voter=autocomplete)
+    @apc.describe(nominee="The nominated player.")
+    @apc.describe(voter="The player to unlock.")
+    async def unlock(self, interaction: Interaction, nominee: str, voter: str):
+        """
+        Unlock a player's vote.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            if not await self.bot.ensure_privileged(interaction, game):
+                return
+
+            state = State.load(game.state)
+
+            error = state.nominations.lock_vote(state=state, nominee=nominee, voter=voter, result=None)
+            if error:
+                return await self.send_ethereal(interaction, description=f"Failed to unlock: `{error}`.")
+
+            game.state = state.dump()
+            await game.update()            
+
+        await self._show(interaction, game, nominee, None)
+
+

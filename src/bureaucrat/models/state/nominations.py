@@ -1,5 +1,6 @@
 from bureaucrat.models.configure import dotdict
 from bureaucrat.models.state.seating import Seat
+from discord import PartialEmoji
 from enum import IntEnum
 from typing import List, Set, Optional, TYPE_CHECKING
 
@@ -22,41 +23,57 @@ class NominationType(IntEnum):
     Exile = 2
 
 
+class VoteResult(IntEnum):
+    """
+    Represents a type of voting modifier.
+    """
+    Yes = 1
+    Thief = -1
+    Bureaucrat = 3
+    No = 0
+
+
 class Vote(dotdict):
     """
     A single voting entry.
     """
-    def __init__(self, *, id: str, vote: Optional[str] = None, private_vote: Optional[str] = None, locked: Optional[bool] = None):
+    def __init__(self, *, id: str, vote: Optional[str] = None, private_vote: Optional[str] = None, locked: Optional[int] = None):
         self.id = id 
         self.vote = vote
         self.private_vote = private_vote
-        self.locked = locked
+        self.locked = VoteResult(locked) if locked is not None else None
 
-    def emojify(self):
+    def emojify(self, *, bot: "Bureaucrat"):
+        if self.locked is None:
+            return ""
+
         match self.locked:
-            case True:
-                return ":white_check_mark:"
-            case False:
-                return ":x:"
-            case None:
-                return ""
+            case VoteResult.Yes:
+                s = ":white_check_mark:"
+            case VoteResult.Thief:
+                s = bot.config.emoji.thief
+            case VoteResult.Bureaucrat:
+                s = bot.config.emoji.bureaucrat
+            case VoteResult.No:
+                s = ":x:"
+        return PartialEmoji.from_str(s)
 
-    def make_description(self, *, indent: str = "  ", bot: "Bureaucrat", seat: Seat, nomination: "Nomination", private: bool = False, count: int, required: int, active: bool):
+    def make_description(self, *, indent: str = "  ", bot: "Bureaucrat", seat: Seat, kind: NominationType, nomination: "Nomination", private: bool = False, count: int, required: int, active: bool):
         """
         Make the description for this vote.
         """
-        status = f"{':arrow_right: ' if active else ''}{self.emojify()} ({count: >2}/{required: >2}) " if self.locked is not None else ""
+        status = f"{':arrow_right: ' if active else ''}{str(self.emojify(bot=bot))} (`{count: >2}`/`{required: >2}`) " if self.locked is not None else ""
         segments = [
-            f"{status}{seat.make_description(bot=bot, private=private)}",
+            f"{status}{seat.make_description(bot=bot, private=private) if seat else '(removed player)'}",
         ]
-        if seat.status != Status.Spent:
+        if kind == NominationType.Exile or seat.status != Status.Spent:
             if private:
                 segments += [
                     f"  - display: {self.vote if self.vote else 'n/a'}",
                     f"  - private: {self.private_vote if self.private_vote else 'n/a'}"
                 ]
             else:
-                segments.append(f"  - vote: '{self.vote if self.vote else 'unset'}")
+                segments.append(f"  - vote: {self.vote if self.vote else 'n/a'}")
         else:
             segments.append("  - *ghost vote already spent*")
         description = f"\n{indent}".join(s for s in segments)
@@ -76,7 +93,15 @@ class Vote(dotdict):
         else:
             self.vote = vote
         return None
-
+    
+    def lock_vote(self, *, kind: NominationType, seat: Seat, vote: Optional[VoteResult]):
+        """
+        Locks a vote.
+        """
+        if seat.status == Status.Spent and kind == NominationType.Execution and vote and vote != VoteResult.No:
+            return f"Their ghost vote is already spent."
+        
+        self.locked = vote
 
 class Nomination (dotdict):
     """
@@ -92,7 +117,7 @@ class Nomination (dotdict):
     def make_description(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, show_votes: bool = True, active: Optional[str] = None):
         nominator = state.seating.seats[state.seating.index(self.nominator)]            
         nominee = state.seating.seats[state.seating.index(self.nominee)]
-        
+
         subsegments = [
             f"Call for {self.kind.name.lower()}: {nominator.alias} ⟶ {nominee.alias}",
             f"- `plaintiff`: {nominator.make_description(bot=bot, private=private)}",
@@ -114,10 +139,10 @@ class Nomination (dotdict):
         segments = []
         for i, vote in enumerate(self.voters):
             seat = state.seating.seats[state.seating.index(vote.id)]
-            if vote.locked == True:
-                count += 1
+            if vote.locked is not None:
+                count += vote.locked.value
             is_active = vote.id == active
-            segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, bot=bot, seat=seat, nomination=self, private=private, count=count, required=required, active=is_active)}")
+            segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, kind=self.kind, bot=bot, seat=seat, nomination=self, private=private, count=count, required=required, active=is_active)}")
         return f"{indent}Votes:\n" + f"\n{indent}".join(s for s in segments)
 
     def set_vote(self, *, state: "State", voter: str, vote: Optional[str], private: bool):
@@ -130,7 +155,17 @@ class Nomination (dotdict):
         
         seat = state.seating.seats[state.seating.index(voter)]
         return votes[0].set_vote(seat=seat, kind=self.kind, vote=vote, private=private)
-
+    
+    def lock_vote(self, *, state: "State", voter: str, vote: Optional[VoteResult]):
+        """
+        Locks the vote, or returns an error.
+        """
+        votes = [v for v in self.voters if v.id == voter]
+        if len(votes) == 0:
+            return f"`{voter}` is not seated in this game."
+        
+        seat = state.seating.seats[state.seating.index(voter)]
+        return votes[0].lock_vote(kind=self.kind, seat=seat, vote=vote)
 
 class Nominations (dotdict):
     """
@@ -164,7 +199,8 @@ class Nominations (dotdict):
         required = state.seating.get_required_votes_for(seat.kind)
         
         nomination = Nomination(nominator=nominator, nominee=nominee, kind=kind, required=required, voters = [])
-        nomination.voters = [Vote(id=seat.id, vote=None, private_vote=None, locked=None) for seat in rotate(state.seating.seats, state.seating.index(nominator))]
+        active_seats = [seat for seat in rotate(state.seating.seats, state.seating.index(nominator)) if not seat.removed]
+        nomination.voters = [Vote(id=seat.id, vote=None, private_vote=None, locked=None) for seat in active_seats]
         self.days[day].append(nomination)
         
         return None
@@ -214,3 +250,13 @@ class Nominations (dotdict):
             return "There is no such nomination."
         
         return nomination.set_vote(state=state, voter=voter, vote=vote, private=private)
+
+    def lock_vote(self, *, state: "State", voter: str, nominee: str, result: Optional[VoteResult]):
+        """
+        Locks the vote on the corresponding nomination, or returns an error.
+        """
+        nomination = self.get_specific_nomination(state.moment.day, nominee)
+        if not nomination:
+            return "There is no such nomination."
+        
+        return nomination.lock_vote(state=state, voter=voter, vote=result)

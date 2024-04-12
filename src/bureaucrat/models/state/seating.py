@@ -90,19 +90,20 @@ class Seat(dotdict):
     """
     A player in the game.
     """
-    def __init__(self, *, id: Optional[str] = None, member: int, alias: str, kind: int = Type.Player.value, roles = {}, status: int = Status.Alive.value):
+    def __init__(self, *, id: Optional[str] = None, member: int, alias: str, kind: int = Type.Player.value, roles = {}, status: int = Status.Alive.value, removed: bool = False):
         self.id = id if id else Sqids(min_length=8).encode([member, int(datetime.now().timestamp())])
         self.member = member
         self.alias = alias
         self.kind = Type(kind)
         self.roles = Roles(**roles)
         self.status = Status(status)
+        self.removed = removed
 
     def make_description(self, *, bot: "Bureaucrat", private: bool = False):
         private_text = self.roles.make_description(bot=bot, private=private, kind=self.kind)
         private = private or self.kind == Type.Traveller
-        return f"{str(self.status.emojify(bot=bot))} {self.alias} (<@{self.member}>){f' the {private_text}' if private else ''}"
-
+        description = f"{str(self.status.emojify(bot=bot))} {self.alias} (<@{self.member}>){f' the {private_text}' if private else ''}"
+        return f"~~{self.alias} (<@{self.member}>)~~" if self.removed else description
 
 class Seating(dotdict):
     """
@@ -112,11 +113,24 @@ class Seating(dotdict):
         self.seats = [Seat(**opts) for opts in seats]
         self.already_init = already_init
 
+    def active_seats(self):
+        """
+        Returns only those seats that are not removed.
+        """
+        return list(seat for seat in self.seats if not seat.removed)
+
     def index(self, id: str):
         """
         Gets the index of the seat corresponding to the given alias.
         """
         indices = [i for i, seat in enumerate(self.seats) if seat.id == id]
+        return indices[0] if len(indices) > 0 else None
+
+    def index_active(self, id: str):
+        """
+        Gets the index of the seat only considering non-removed seats.
+        """
+        indices = [i for i, seat in enumerate(self.active_seats()) if seat.id == id]
         return indices[0] if len(indices) > 0 else None
 
     def member_to_id(self, user_id: int):
@@ -211,6 +225,18 @@ class Seating(dotdict):
             self.seats[l].status = status
         return True
     
+    def set_type(self, *, id: str, type: Optional[Type]):
+        """
+        Sets the type of a seat.
+        """
+        l = self.index(id)
+        if l is None:
+            return False
+        
+        if type:
+            self.seats[l].kind = type
+        return True
+
     def add_player(self, *, user: Member, kind: Type, role: Optional[str], apparent: Optional[str]):
         """
         Adds a player to the seating, provided they are not already in a seat.
@@ -230,7 +256,8 @@ class Seating(dotdict):
         if l is None:
             return None
         
-        return self.seats.pop(l)
+        self.seats[l].removed = True
+        return self.seats[l]
 
     def substitute_player(self, *, id: str, user: Member):
         """
@@ -253,7 +280,7 @@ class Seating(dotdict):
             return "There are no players."
         
         segments = []
-        for i, seat in enumerate(self.seats):
+        for i, seat in enumerate(self.active_seats()):
             segments.append(f"{i + 1}. {seat.make_description(bot=bot, private=private)}")
         return "\n".join(s for s in segments)
 
