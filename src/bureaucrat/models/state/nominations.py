@@ -107,24 +107,37 @@ class Nomination (dotdict):
     """
     A single nomination.
     """
-    def __init__(self, *, nominator: str, nominee: str, kind: int = NominationType.Execution.value, required: int, voters: List[dict] = []):
+    def __init__(self, *, nominator: str, nominee: str, accusation: Optional[str] = None, defense: Optional[str] = None, kind: int = NominationType.Execution.value, required: int, voters: List[dict] = [], marked: bool = False):
         self.nominator = nominator
         self.nominee = nominee
+        self.accusation = accusation
+        self.defense = defense
         self.kind = NominationType(kind)
         self.required = required
         self.voters = [Vote(**data) for data in voters]
+        self.marked = marked
+
+    def emojify(self, *, bot: "Bureaucrat"):
+        if self.marked:
+            s = bot.config.emoji.marked
+        else:
+            s = ""
+        return PartialEmoji.from_str(s)
 
     def make_description(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, show_votes: bool = True, active: Optional[str] = None):
         nominator = state.seating.seats[state.seating.index(self.nominator)]            
         nominee = state.seating.seats[state.seating.index(self.nominee)]
+        collected = sum(vote.locked.value if vote.locked is not None else 0 for vote in self.voters)
 
         subsegments = [
             f"Call for {self.kind.name.lower()}: {nominator.alias} ⟶ {nominee.alias}",
             f"- `plaintiff`: {nominator.make_description(bot=bot, private=private)}",
             f"- `defendant`: {nominee.make_description(bot=bot, private=private)}",
-            f"- {self.required} vote{'s' if self.required != 1 else ''} required"
+            f"- {f'{self.emojify(bot=bot)} ' if self.marked else ''}{collected} vote{'s' if collected != 1 else ''} (of {self.required} required)"
         ]
         if show_votes:
+            subsegments.append(f"\nAccusation: \n> {'n/a' if self.accusation is None else f'\"{self.accusation}\"'}")
+            subsegments.append(f"\nDefense: \n> {'n/a' if self.defense is None else f'\"{self.defense}\"'}")
             subsegments.append(self.make_voting_log(state=state, indent=indent, bot=bot, private=private, active=active))
 
         description = f"\n{indent}".join(s for s in subsegments)
@@ -260,3 +273,39 @@ class Nominations (dotdict):
             return "There is no such nomination."
         
         return nomination.lock_vote(state=state, voter=voter, vote=result)
+
+    def mark(self, *, state: "State", nominee: str, mark: bool):
+        """
+        Sets the marked state on the corresponding nomination.
+        """
+        nomination = self.get_specific_nomination(state.moment.day, nominee)
+        if not nomination:
+            return "There is no such nomination."
+        
+        nomination.marked = mark
+        return None
+
+    def accuse(self, *, state: "State", nominator: str, nominee: str, accusation: str):
+        """
+        Sets the accusation message on the corresponding nomination.
+        """
+        nomination = self.get_specific_nomination(state.moment.day, nominee)
+        if not nomination:
+            return "There is no such nomination."
+        
+        if nomination.nominator != nominator:
+            return "You did not make this nomination."
+        
+        nomination.accusation = accusation
+        return None
+
+    def defend(self, *, state: "State", nominee: str, defense: str):
+        """
+        Sets the defense message on the corresponding nomination.
+        """
+        nomination = self.get_specific_nomination(state.moment.day, nominee)
+        if not nomination:
+            return "There is no such nomination."
+        
+        nomination.defense = defense
+        return None

@@ -79,7 +79,7 @@ class Roles(dotdict):
         true = self.emojify(bot=bot, kind="true") if self.true else None
         true = (f"{str(true)}" if true else f"`{self.true}`") if self.true else None
         if not true:
-            return "unknown role"
+            return ":question:"
 
         apparent = self.emojify(bot=bot, kind="apparent") if self.apparent else None
         apparent = (f"-{str(apparent)}" if apparent else f"-`{self.apparent}`") if self.apparent else ""
@@ -102,7 +102,8 @@ class Seat(dotdict):
     def make_description(self, *, bot: "Bureaucrat", private: bool = False):
         private_text = self.roles.make_description(bot=bot, private=private, kind=self.kind)
         private = private or self.kind == Type.Traveller
-        description = f"{str(self.status.emojify(bot=bot))} {self.alias} (<@{self.member}>){f' the {private_text}' if private else ''}"
+        role_string = f' the {private_text}'
+        description = f"{str(self.status.emojify(bot=bot))} {self.alias} (<@{self.member}>){role_string if private else ''}"
         return f"~~{self.alias} (<@{self.member}>)~~" if self.removed else description
 
 class Seating(dotdict):

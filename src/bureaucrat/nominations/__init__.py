@@ -217,11 +217,15 @@ class Nominations(commands.GroupCog, group_name="nominations"):
         channel = self.bot.get_channel(game.channel) or await interaction.guild.fetch_channel(game.channel)
         await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n<@{nominator_seat.member}> has nominated <@{nominee_seat.member}>.")
 
+        await self._show(interaction, game, nominee, None, followup=True)
+
     @apc.command()
     @apc.autocomplete(nominee=existing_nominees)
     @apc.describe(nominee="The nomination to edit.")
     @apc.describe(required="The number of yes votes required to pass this nomination.")
-    async def edit(self, interaction: Interaction, nominee: str, required: Optional[int]):
+    @apc.describe(accusation="A new accusation message.")
+    @apc.describe(defense="A new defense message.")
+    async def edit(self, interaction: Interaction, nominee: str, required: Optional[int], accusation: Optional[str], defense: Optional[str]):
         """
         Edit an existing nomination.
         """
@@ -241,8 +245,70 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             if not nomination:
                 return await self.send_ethereal(interaction, description="There is no such nomination.")
 
+            if accusation:
+                nomination.accusation = accusation
+            if defense:
+                nomination.defense = defense
             if required:
                 nomination.required = required
+
+            game.state = state.dump()
+            await game.update()
+        
+        await self._show(interaction, game, nominee, None)
+
+    @apc.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nomination to mark for death.")
+    async def mark(self, interaction: Interaction, nominee: str):
+        """
+        Mark one of today's nominees for death.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+            
+            if not await self.bot.ensure_privileged(interaction, game):
+                return
+            
+            state = State.load(game.state)
+
+            err = state.nominations.mark(state=state, nominee=nominee, mark=True)
+            if err:
+                return await self.send_ethereal(interaction, description=err)
+
+            game.state = state.dump()
+            await game.update()
+        
+        await self._show(interaction, game, nominee, None)
+
+    @apc.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nomination to remove a mark from.")
+    async def unmark(self, interaction: Interaction, nominee: str):
+        """
+        Remove a mark from an existing nomination.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+            
+            if not await self.bot.ensure_privileged(interaction, game):
+                return
+            
+            state = State.load(game.state)
+
+            err = state.nominations.mark(state=state, nominee=nominee, mark=False)
+            if err:
+                return await self.send_ethereal(interaction, description=err)
 
             game.state = state.dump()
             await game.update()
@@ -377,3 +443,64 @@ class Nominations(commands.GroupCog, group_name="nominations"):
 
         await self._show(interaction, game, nominee, None)
 
+    add = apc.Group(name="add", description="Add trial statements to open nominations.")
+
+    @add.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nominee to accuse. You must have nominated this player.")
+    @apc.describe(accusation="Your accusation message.")
+    async def accusation(self, interaction: Interaction, nominee: str, accusation: str):
+        """
+        Add an accusation to a nomination that you created.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            state = State.load(game.state)
+
+            nominator = state.seating.member_to_id(interaction.user.id)
+            if nominator is None:
+                return await self.send_ethereal(interaction, description="You are not seated in this game.")
+
+            error = state.nominations.accuse(state=state, nominator=nominator, nominee=nominee, accusation=accusation)  
+            if error:
+                return await self.send_ethereal(interaction, description=error)    
+
+            game.state = state.dump()
+            await game.update()            
+
+        await self._show(interaction, game, nominee, None)
+
+    @add.command()
+    @apc.describe(defense="Your defense message.")
+    async def defense(self, interaction: Interaction, defense: str):
+        """
+        Add a defense to a nomination where you're a nominee.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+    
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            state = State.load(game.state)
+
+            nominee = state.seating.member_to_id(interaction.user.id)
+            if nominee is None:
+                return await self.send_ethereal(interaction, description="You are not seated in this game.")
+
+            error = state.nominations.defend(state=state, nominee=nominee, defense=defense)  
+            if error:
+                return await self.send_ethereal(interaction, description=error)    
+
+            game.state = state.dump()
+            await game.update()            
+
+        await self._show(interaction, game, nominee, None)

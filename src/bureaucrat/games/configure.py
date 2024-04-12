@@ -49,7 +49,7 @@ class Configure:
 
         # Handle script updates specifically as well.
         if "script" in kwargs and kwargs["script"] is not None:
-            await self.parent.add_script_to_state(game, kwargs['script'])
+            await self.parent.add_script_to_game(game, kwargs['script'])
 
         await game.update()
         await self.show(interaction)
