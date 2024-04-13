@@ -76,3 +76,4 @@ class Feedback(commands.GroupCog, group_name="feedback"):
                 return await self.send_ethereal(interaction, description="That game does not exist.")
 
         await FeedbackListView.create(parent=self, interaction=interaction, game=game)
+ 

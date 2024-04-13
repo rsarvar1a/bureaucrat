@@ -37,7 +37,7 @@ def make_logger(severity, name):
         formatter = logging.Formatter("[{asctime}] [{levelname:<8}] {name}: {message}", dt_fmt, style="{")
     handler.setFormatter(formatter)
 
-    return logger
+    return logger, handler, formatter
 
 
 class StreamFormatter(logging.Formatter):

@@ -123,9 +123,10 @@ class ScriptDetailsView(ui.View):
         try:
             script = await Script.objects.get(id=id)
         except ormar.NoMatch:
-            return await interaction.followup.send(
-                embed=embeds.make_error(bot, message=f"Could not find the script with id {id}."), ephemeral=True
-            )
+            if followup:
+                return await bot.followup_ethereal(interaction, title="Script", description=f"Could not find the script with id `{id}`.")
+            else:
+                return await bot.send_ethereal(interaction, title="Script", description=f"Could not find the script with id `{id}`.")
 
         pages = await Document.objects.filter(script=script, doctype=".png").order_by("-url").all()
         pages = sorted(

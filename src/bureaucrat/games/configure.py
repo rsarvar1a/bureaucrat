@@ -1,9 +1,15 @@
+import json
+
+from bureaucrat.models.config import Config
+from bureaucrat.models.state import State
 from bureaucrat.models.configure import ormar
 from bureaucrat.models import games
-from bureaucrat.models.games import ActiveGame, Game, Config, State
+from bureaucrat.models.games import ActiveGame, Game
 from bureaucrat.utility import checks, embeds
 from discord import Interaction
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING
+from urllib.request import urlretrieve
 
 if TYPE_CHECKING:
     from bureaucrat import Bureaucrat
@@ -31,19 +37,21 @@ class Configure:
             return
 
         config = Config.load(game.config)
-
         non_null = {k: v for k, v in kwargs.items() if v is not None}
         config.__dict__.update(**non_null)
-
         game.config = config.dump()
-        await game.update()
 
         # Handle this side effect explicitly.
         if "name" in kwargs and kwargs["name"] is not None:
-            channel_id = self.parent.get_channel_id(interaction.channel)
+            channel_id = self.bot.get_channel_id(interaction.channel)
             channel = await self.bot.fetch_channel(channel_id)
             await channel.edit(name=kwargs["name"])
 
+        # Handle script updates specifically as well.
+        if "script" in kwargs and kwargs["script"] is not None:
+            await self.parent.add_script_to_game(game, kwargs['script'])
+
+        await game.update()
         await self.show(interaction)
 
     async def show(self, interaction: Interaction):

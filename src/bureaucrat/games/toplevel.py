@@ -1,6 +1,8 @@
+from bureaucrat.models.config import Config
+from bureaucrat.models.state import State
 from bureaucrat.models.configure import ormar
 from bureaucrat.models import games
-from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Config, Participant, State, Signup
+from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, Signup
 from bureaucrat.models.scripts import Script
 from bureaucrat.scripts.details import ScriptDetailsView
 from bureaucrat.utility import checks, embeds
@@ -98,6 +100,10 @@ class TopLevel:
 
         as_member = await interaction.guild.fetch_member(interaction.user.id)
         await self.parent._roles.set_role(game, as_member, RoleType.STORYTELLER)
+
+        if script:
+            await self.parent.add_script_to_game(game, script)
+            await game.update()
 
         await self.followup_ethereal(interaction, description=f"Created game '{name}' in {channel.mention}.")
 

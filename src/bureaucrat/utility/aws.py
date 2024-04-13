@@ -32,3 +32,6 @@ class AWSClient:
                 self.bot.logger.error(e)
 
         return f"https://{self.bucket}.s3.amazonaws.com/{bucket}/{key}"
+
+    def s3_url(self, *, bucket, key, stem):
+        return f"https://{self.bucket}.s3.amazonaws.com/{bucket}/{key}/{stem}"

@@ -38,7 +38,11 @@ class Roles:
         Creates a role pair for a new game.
         """
         player_role = await guild.create_role(name=f"pl:{channel.id}", mentionable=True)
+        await player_role.edit(position=1)
+
         st_role = await guild.create_role(name=f"st:{channel.id}", mentionable=True)
+        await st_role.edit(position=1)
+
         return player_role, st_role
 
     async def prepare_channel(self, guild: Guild, channel: TextChannel):
