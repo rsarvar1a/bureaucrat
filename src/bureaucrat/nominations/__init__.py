@@ -1,7 +1,7 @@
 
 from bureaucrat.models import CONFIG
 from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType
-from bureaucrat.models.state import VoteResult, Marker, Phase, State, Seat, Status, Type
+from bureaucrat.models.state import NominationType, VoteResult, Marker, Phase, State, Seat, Status, Type
 from bureaucrat.utility import checks, embeds
 from datetime import datetime, timedelta
 from discord import app_commands as apc, Interaction, Member, TextChannel, Thread
@@ -52,9 +52,7 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             return []
         game = in_channel.game
         state = State.load(game.state)
-
-        unnominated = [seat for seat in state.seating.seats if not any(nom.nominator == seat.id for nom in state.nominations.get_nominations(state.moment.day))]
-        return [apc.Choice(name=seat.alias, value=seat.id) for seat in unnominated if current.lower() in seat.alias.lower()]
+        return [apc.Choice(name=seat.alias, value=seat.id) for seat in state.seating.seats if current.lower() in seat.alias.lower()]
 
     async def valid_nominees(self, interaction: Interaction, current: str):
         """

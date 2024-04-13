@@ -193,11 +193,12 @@ class Nominations (dotdict):
         """
         day = state.moment.day
         seat = state.seating.seats[state.seating.index(nominee)]
+        kind = NominationType.Execution if seat.kind == Type.Player else NominationType.Exile
 
         if self.get_specific_nomination(day, nominee):
             return f"<@{seat.member}> has already been nominated today."
         
-        if any(nom.nominator == nominator for nom in self.get_nominations(day)):
+        if kind == NominationType.Execution and any(nom.nominator == nominator and nom.kind == NominationType.Execution for nom in self.get_nominations(day)):
             return "You have already nominated today."
         
         nominator_index = state.seating.index(nominator)
@@ -208,7 +209,6 @@ class Nominations (dotdict):
         if nom_seat.status != Status.Alive:
             return "You cannot nominate because you are dead."
 
-        kind = NominationType.Execution if seat.kind == Type.Player else NominationType.Exile
         required = state.seating.get_required_votes_for(seat.kind)
         
         nomination = Nomination(nominator=nominator, nominee=nominee, kind=kind, required=required, voters = [])
