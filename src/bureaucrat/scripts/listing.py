@@ -67,7 +67,7 @@ class ScriptListView(ui.View):
         if page_size is None:
             page_size = ScriptListView.PAGE_SIZE
 
-        query = {k: v for k, v in {"author": author, "name__contains": name}.items() if v}
+        query = {k: v for k, v in {"author": author, "name__icontains": name}.items() if v}
         count = await Script.objects.filter(**query).count()
         max_page = int(ceil(float(count) / float(page_size)))
 
