@@ -2,7 +2,7 @@ from bureaucrat.models.config import Config
 from bureaucrat.models.state import State
 from bureaucrat.models.configure import ormar
 from bureaucrat.models import games
-from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, Signup
+from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, Signup, ManagedThread, ThreadType
 from bureaucrat.models.scripts import Script
 from bureaucrat.scripts.details import ScriptDetailsView
 from bureaucrat.utility import checks, embeds
@@ -130,7 +130,13 @@ class TopLevel:
                     ping = f"(<@&{game.st_role}>) "
 
         description = f"{ping}{interaction.user.mention} sent the following message:\n>>> {message}"
-        await interaction.channel.send(content=description)
+
+        thread = await ManagedThread.objects.get_or_none(game=game, type=ThreadType.Announcements)
+        if not thread:
+            return await self.send_ethereal("There is no announcements thread yet.")
+
+        thread = self.bot.get_channel(thread.id) or await self.bot.fetch_channel(thread.id)
+        await thread.send(content=description)
 
         await self.send_ethereal(interaction, description="Sent an announcement.")
 

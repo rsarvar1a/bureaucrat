@@ -1,5 +1,5 @@
 from bureaucrat.models import CONFIG
-from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType
+from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType, ManagedThread, ThreadMember, ThreadType
 from bureaucrat.models.state import Marker, State, Seat, Status, Type
 from bureaucrat.utility import checks, embeds
 from datetime import datetime, timedelta
@@ -129,6 +129,8 @@ class Seating(commands.GroupCog, group_name="seating"):
 
             game.state = state.dump()
             await game.update()
+
+            await self.bot.get_cog("Threads").create_st_thread(game, user)
         
         await self._show(interaction, game, followup=True)
 
@@ -189,13 +191,23 @@ class Seating(commands.GroupCog, group_name="seating"):
             prev_id = state.seating.substitute_player(id=player, user=substitute)
             games = self.bot.get_cog("Games")
 
-            if prev_id:
-                as_member = await interaction.guild.fetch_member(prev_id)
-                await games._roles.set_role(game, as_member, RoleType.NONE)
+            if not prev_id:
+                return await self.send_ethereal(interaction, description="There is no such previous player.")
+
+            as_member = await interaction.guild.fetch_member(prev_id)
+            await games._roles.set_role(game, as_member, RoleType.NONE)
             await games._roles.set_role(game, substitute, RoleType.PLAYER)
 
             game.state = state.dump()
             await game.update()
+
+            threads = await ThreadMember.objects.select_related(ThreadMember.thread).filter(game=game, member=prev_id).all()
+            
+            for managed_thread in threads:
+                thread: Thread = interaction.guild.get_channel(managed_thread.thread.id) or await interaction.guild.fetch_channel(managed_thread.thread.id)
+                await thread.remove_user(as_member)
+                await thread.add_user(substitute)
+                await managed_thread.update(member=substitute.id)
         
         await self._show(interaction, game, followup=True)
 
