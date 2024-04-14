@@ -58,7 +58,7 @@ class Vote(dotdict):
                 s = ":x:"
         return PartialEmoji.from_str(s)
 
-    def make_description(self, *, indent: str = "  ", bot: "Bureaucrat", seat: Seat, kind: NominationType, nomination: "Nomination", private: bool = False, count: int, required: int, active: bool):
+    def make_description(self, *, indent: str = "  ", bot: "Bureaucrat", seat: Seat, kind: NominationType, nomination: "Nomination", private: bool = False, viewer: Optional[str], count: int, required: int, active: bool):
         """
         Make the description for this vote.
         """
@@ -67,7 +67,7 @@ class Vote(dotdict):
             f"{status}{seat.make_description(bot=bot, private=private) if seat else '(removed player)'}",
         ]
         if kind == NominationType.Exile or seat.status != Status.Spent:
-            if private:
+            if private or self.id == viewer:
                 segments += [
                     f"  - display: {self.vote if self.vote else 'n/a'}",
                     f"  - private: {self.private_vote if self.private_vote else 'n/a'}"
@@ -124,7 +124,7 @@ class Nomination (dotdict):
             s = ""
         return PartialEmoji.from_str(s)
 
-    def make_description(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, show_votes: bool = True, active: Optional[str] = None):
+    def make_description(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, show_votes: bool = True, viewer: Optional[str], active: Optional[str] = None):
         nominator = state.seating.seats[state.seating.index(self.nominator)]            
         nominee = state.seating.seats[state.seating.index(self.nominee)]
         collected = sum(vote.locked.value if vote.locked is not None else 0 for vote in self.voters)
@@ -138,12 +138,12 @@ class Nomination (dotdict):
         if show_votes:
             subsegments.append(f"\nAccusation: \n> {'n/a' if self.accusation is None else f'\"{self.accusation}\"'}")
             subsegments.append(f"\nDefense: \n> {'n/a' if self.defense is None else f'\"{self.defense}\"'}")
-            subsegments.append(self.make_voting_log(state=state, indent=indent, bot=bot, private=private, active=active))
+            subsegments.append(self.make_voting_log(state=state, indent=indent, bot=bot, private=private, viewer=viewer, active=active))
 
         description = f"\n{indent}".join(s for s in subsegments)
         return description
 
-    def make_voting_log(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, active: Optional[str] = None):
+    def make_voting_log(self, *, indent: str = "", bot: "Bureaucrat", state: "State", private: bool = False, viewer: Optional[str], active: Optional[str] = None):
         """
         Lists out the voters in this nomination, as well as their voting attributes.
         """
@@ -155,7 +155,7 @@ class Nomination (dotdict):
             if vote.locked is not None:
                 count += vote.locked.value
             is_active = vote.id == active
-            segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, kind=self.kind, bot=bot, seat=seat, nomination=self, private=private, count=count, required=required, active=is_active)}")
+            segments.append(f"{indent}{i + 1}. {vote.make_description(indent=indent, kind=self.kind, bot=bot, seat=seat, nomination=self, private=private, viewer=viewer, count=count, required=required, active=is_active)}")
         return f"\n{indent}Votes:\n" + f"\n{indent}".join(s for s in segments)
 
     def set_vote(self, *, state: "State", voter: str, vote: Optional[str], private: bool):
@@ -235,7 +235,7 @@ class Nominations (dotdict):
         noms = [nom for nom in nominations if nom.nominee == nominee]
         return noms[0] if len(noms) > 0 else None
 
-    def make_page(self, *, bot: "Bureaucrat", day: Optional[int], state: "State", private: bool = False):
+    def make_page(self, *, bot: "Bureaucrat", day: Optional[int], state: "State", private: bool = False, viewer: Optional[str]):
         """
         Lists all of the active nominations today.
         """
@@ -249,7 +249,7 @@ class Nominations (dotdict):
         
         segments = []
         for i, nomination in enumerate(self.days[day]):
-            description = f"{i + 1}. {nomination.make_description(indent='  ', bot=bot, state=state, private=False, show_votes=False)}"
+            description = f"{i + 1}. {nomination.make_description(indent='  ', bot=bot, state=state, private=False, viewer=viewer, show_votes=False)}"
             segments.append(description)
         
         return "\n\n".join(s for s in segments)

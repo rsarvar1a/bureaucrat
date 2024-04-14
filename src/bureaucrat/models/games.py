@@ -56,17 +56,6 @@ class RoleType(Enum):
     NONE = "None"
 
 
-class ManagedThread(ormar.Model):
-    """
-    A thread belonging to a game that was created by Bureaucrat.
-    """
-
-    ormar_config = CONFIG.copy(tablename="threads")
-
-    id: int = ormar.BigInteger(primary_key=True)
-    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
-
-
 class Signup(ormar.Model):
     """
     A signup request from a player.
@@ -114,3 +103,39 @@ class GameReminder(ormar.Model):
     id: int = ormar.Integer(primary_key=True, autoincrement=True)
     game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
     reminder: Reminder = ormar.ForeignKey(Reminder, unique=True, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+
+
+class ThreadType(Enum):
+    """
+    What kind of thread this is.
+    """
+    Private = 1
+    Layout = 2
+    Announcements = 3
+    Nomination = 4
+    Whisper = 5
+
+
+class ManagedThread(ormar.Model):
+    """
+    A thread managed by Bureaucrat.
+    """
+
+    ormar_config = CONFIG.copy(tablename="threads")
+
+    id: int = ormar.BigInteger(primary_key=True)
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+    type: ThreadType = ormar.Enum(enum_class=ThreadType)
+
+
+class ThreadMember(ormar.Model):
+    """
+    A member of a thread managed by Bureaucrat.
+    """
+
+    ormar_config = CONFIG.copy(tablename="thread_members")
+
+    id: int = ormar.Integer(primary_key=True, autoincrement=True)
+    game: Game = ormar.ForeignKey(Game, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+    thread: ManagedThread = ormar.ForeignKey(ManagedThread, ondelete=ReferentialAction.CASCADE, onupdate=ReferentialAction.CASCADE)
+    member: int = ormar.BigInteger()

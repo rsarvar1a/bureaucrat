@@ -1,6 +1,6 @@
 
 from bureaucrat.models import CONFIG
-from bureaucrat.models.games import ActiveGame, Game, Participant, RoleType
+from bureaucrat.models.games import ActiveGame, Game, ManagedThread, Participant, RoleType, ThreadType
 from bureaucrat.models.state import NominationType, VoteResult, Marker, Phase, State, Seat, Status, Type
 from bureaucrat.utility import checks, embeds
 from datetime import datetime, timedelta
@@ -106,7 +106,7 @@ class Nominations(commands.GroupCog, group_name="nominations"):
         participant = await Participant.objects.get_or_none(game=game, member=user_id)        
         private = (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
 
-        description = state.nominations.make_page(bot=self.bot, day=day, state=state, private=private)
+        description = state.nominations.make_page(bot=self.bot, day=day, state=state, private=private, viewer=None)
         await interaction.response.send_message(embed=embeds.make_embed(self.bot, title="Nominations", description=description), ephemeral=True)
 
     @apc.command()
@@ -139,7 +139,8 @@ class Nominations(commands.GroupCog, group_name="nominations"):
         if nomination is None:
             description = "There is no such nomination."
         else:
-            description = nomination.make_description(indent="", bot=self.bot, state=state, private=private, show_votes=True)
+            viewer = state.seating.member_to_id(interaction.user.id)
+            description = nomination.make_description(indent="", bot=self.bot, state=state, private=private, show_votes=True, viewer=viewer)
 
         if followup:
             await interaction.followup.send(embed=embeds.make_embed(self.bot, title="Nominations", description=description), ephemeral=True)
@@ -163,6 +164,10 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             if game is None:
                 return
 
+            thread = await ManagedThread.objects.get_or_none(game=game, type=ThreadType.Nomination)
+            if not thread:
+                return await self.send_ethereal(interaction, description="There is no nomination thread yet.")
+
             await interaction.response.defer(ephemeral=True)
 
             state = State.load(game.state)
@@ -177,8 +182,8 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             game.state = state.dump()
             await game.update()            
 
-        channel = self.bot.get_channel(game.channel) or await interaction.guild.fetch_channel(game.channel)
-        await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n{interaction.user.mention} has nominated <@{nominee_seat.member}>.")
+        thread = self.bot.get_channel(thread.id) or await interaction.guild.fetch_channel(thread.id)
+        await thread.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n{interaction.user.mention} has nominated <@{nominee_seat.member}>.")
 
         await self._show(interaction, game, nominee, None, followup=True)
 
@@ -197,6 +202,10 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             game = await self.bot.ensure_active(interaction)
             if game is None:
                 return
+            
+            thread = await ManagedThread.objects.get_or_none(game=game, type=ThreadType.Nomination)
+            if not thread:
+                return await self.send_ethereal(interaction, description="There is no nomination thread yet.")
 
             await interaction.response.defer(ephemeral=True)
 
@@ -212,8 +221,8 @@ class Nominations(commands.GroupCog, group_name="nominations"):
             game.state = state.dump()
             await game.update()            
 
-        channel = self.bot.get_channel(game.channel) or await interaction.guild.fetch_channel(game.channel)
-        await channel.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n<@{nominator_seat.member}> has nominated <@{nominee_seat.member}>.")
+        thread = self.bot.get_channel(thread.id) or await interaction.guild.fetch_channel(thread.id)
+        await thread.send(content=f"<@&{game.player_role}> <@&{game.st_role}>\n<@{nominator_seat.member}> has nominated <@{nominee_seat.member}>.")
 
         await self._show(interaction, game, nominee, None, followup=True)
 

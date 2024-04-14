@@ -93,11 +93,11 @@ class Administrative(commands.GroupCog, group_name="admin"):
         )
 
     @apc.command()
-    async def list_extensions(self, interaction: Interaction):
+    async def extensions(self, interaction: Interaction):
         """
         List Bureaucrat's enabled extensions.
         """
-        cogs = "\n".join(f"{i + 1}. Bureaucrat.{c}" for i, c in enumerate(self.bot.cogs))
+        cogs = "\n".join(f"{i + 1}. `{c.lower()}`" for i, c in enumerate(self.bot.cogs))
         await interaction.response.send_message(
             embed=embeds.make_embed(
                 self.bot,
