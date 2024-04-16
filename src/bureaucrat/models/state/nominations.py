@@ -64,7 +64,7 @@ class Vote(dotdict):
         """
         status = f"{':arrow_right: ' if active else ''}{str(self.emojify(bot=bot))}  (`{count: >2}`/`{required: >2}`)  " if self.locked is not None else ""
         segments = [
-            f"{status}{seat.make_description(bot=bot, private=private) if seat else '(removed player)'}",
+            f"{status}{seat.make_description(bot=bot, private=False)}",
         ]
         if kind == NominationType.Exile or seat.status != Status.Spent:
             if private or self.id == viewer:

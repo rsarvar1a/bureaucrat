@@ -113,7 +113,8 @@ class Nominations(commands.GroupCog, group_name="nominations"):
     @apc.autocomplete(nominee=autocomplete)
     @apc.describe(nominee="The player that was nominated.")
     @apc.describe(day="The day on which to search for nominations. Defaults to the current day.")
-    async def show(self, interaction: Interaction, nominee: str, day: Optional[int]):
+    @apc.describe(public="If you are a storyteller, whether or not to generate the public view. Defaults to private.")
+    async def show(self, interaction: Interaction, nominee: str, day: Optional[int], public: Optional[bool]):
         """
         Show information on a specific nomination.
         """
@@ -124,14 +125,14 @@ class Nominations(commands.GroupCog, group_name="nominations"):
         if game is None:
             return
         
-        await self._show(interaction, game, nominee, day)
+        await self._show(interaction, game, nominee, day, public=public if public is not None else False)
     
-    async def _show(self, interaction: Interaction, game: Game, nominee: str, day: Optional[int], *, followup: bool = False):
+    async def _show(self, interaction: Interaction, game: Game, nominee: str, day: Optional[int], *, followup: bool = False, public: bool = False):
         state = State.load(game.state)
 
         user_id = interaction.user.id
         participant = await Participant.objects.get_or_none(game=game, member=user_id)        
-        private = (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
+        private = (not public) and (user_id in self.bot.owner_ids or game.owner == user_id or (participant and participant.role == RoleType.STORYTELLER))
 
         day = day if day is not None else state.moment.day
         nomination = state.nominations.get_specific_nomination(day, nominee)
