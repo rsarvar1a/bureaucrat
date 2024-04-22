@@ -1,17 +1,14 @@
 import logging
 import tomllib
 
-from discord.utils import MISSING
-
 from bureaucrat import admin, archives, feedback, games, models, nominations, phases, reminders, scripts, seating, threads
 from bureaucrat.models.games import ActiveCategory, ActiveGame, Game, Participant, RoleType
 from bureaucrat.utility import aws, logging, embeds
-from discord import AllowedMentions, Intents, Interaction, Thread, utils
+from discord import AllowedMentions, Intents, Interaction, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import DefaultHelpCommand
 from discord.ext.commands.bot import Bot
 from dotmap import DotMap
-from logging import Handler, Formatter
 from typing import List, Optional
 
 

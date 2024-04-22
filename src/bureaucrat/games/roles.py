@@ -97,7 +97,7 @@ class Roles:
 
         channel_id = self.bot.get_channel_id(interaction.channel)
         in_channel = await ActiveGame.objects.select_related(ActiveGame.game.participants).get(id=channel_id)
-        members = [(await interaction.guild.fetch_member(p.member), p.role) for p in in_channel.game.participants]
+        members = [(interaction.guild.get_member(p.member) or await interaction.guild.fetch_member(p.member), p.role) for p in in_channel.game.participants]
 
         segments = []
         for cur_role in [RoleType.STORYTELLER, RoleType.PLAYER]:
