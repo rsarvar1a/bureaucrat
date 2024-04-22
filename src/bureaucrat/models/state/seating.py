@@ -189,7 +189,7 @@ class Seating(dotdict):
         self.seats[l], self.seats[r] = self.seats[r], self.seats[l]
         return True
 
-    def set_alias(self, *, id: str, alias: str):
+    def set_alias(self, *, id: str, alias: Optional[str]):
         """
         Sets the alias of the given player.
         """
@@ -197,7 +197,8 @@ class Seating(dotdict):
         if l is None:
             return False
         
-        self.seats[l].alias = alias
+        if alias:
+            self.seats[l].alias = alias
         return True
 
     def set_role(self, *, id: str, true: Optional[str], apparent: Optional[str]):

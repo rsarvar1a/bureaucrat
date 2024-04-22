@@ -248,7 +248,8 @@ class Seating(commands.GroupCog, group_name="seating"):
     @apc.describe(true_role="The true character of this player, as its id in the script.")
     @apc.describe(apparent_role="The character this player believes they are, if not the same as the true role.")
     @apc.describe(type="Whether the player is a Traveller or not.")
-    async def edit(self, interaction: Interaction, player: str, status: Optional[Status], true_role: Optional[str], apparent_role: Optional[str], type: Optional[Type]):
+    @apc.describe(alias="The player's new alias.")
+    async def edit(self, interaction: Interaction, player: str, status: Optional[Status], true_role: Optional[str], apparent_role: Optional[str], type: Optional[Type], alias: Optional[str]):
         """
         Edits a player's info in the seating order.
         """
@@ -267,6 +268,7 @@ class Seating(commands.GroupCog, group_name="seating"):
 
             state = State.load(game.state)
 
+            state.seating.set_alias(id=player, alias=alias)
             state.seating.set_role(id=player, true=true_role, apparent=apparent_role)
             state.seating.set_status(id=player, status=status)
             state.seating.set_type(id=player, type=type)
