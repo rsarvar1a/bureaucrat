@@ -6,9 +6,9 @@ authors = ["Rohan Sarvaria <rsarvaria@uwaterloo.ca>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 discord = "^2.3.2"
-scriptmaker = "^1.4.4"
+scriptmaker = "^1.5.2"
 sqids = "^0.4.1"
 asyncpg = "^0.29.0"
 ormar = "^0.20.0"
