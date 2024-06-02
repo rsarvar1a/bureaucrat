@@ -1,3 +1,4 @@
+import humanize
 import os
 
 from bureaucrat.models.configure import ormar
@@ -62,8 +63,10 @@ class ScriptDetailsView(ui.View):
 
         file = File(zip_path, filename="render.zip")
         if os.stat(zip_path).st_size >= interaction.guild.filesize_limit:
+            allowed = humanize.naturalsize(interaction.guild.filesize_limit)
+            actual = humanize.naturalsize(os.stat(zip_path).st_size)
             await interaction.followup.send(
-                embed=embeds.make_error(self.bot, message=f"The render is too big to send."),
+                embed=embeds.make_error(self.bot, message=f"The render is too big to send (allowed: {allowed}, actual: {actual})"),
                 ephemeral=True,
             )
         else:   
