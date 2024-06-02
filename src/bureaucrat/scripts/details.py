@@ -61,11 +61,17 @@ class ScriptDetailsView(ui.View):
                 zipfile.write(file, arcname=file.relative_to(self.workspace))
 
         file = File(zip_path, filename="render.zip")
-        await interaction.followup.send(
-            content="Here's your render!",
-            ephemeral=True,
-            file=file,
-        )
+        if os.stat(zip_path).st_size >= interaction.guild.file_limit:
+            await interaction.followup.send(
+                embed=embeds.make_error(self.bot, message=f"The render is too big to send."),
+                ephemeral=True,
+            )
+        else:   
+            await interaction.followup.send(
+                content="Here's your render!",
+                ephemeral=True,
+                file=file,
+            )
 
     def enable(self, button):
         button.disabled = False
