@@ -61,7 +61,7 @@ class ScriptDetailsView(ui.View):
                 zipfile.write(file, arcname=file.relative_to(self.workspace))
 
         file = File(zip_path, filename="render.zip")
-        if os.stat(zip_path).st_size >= interaction.guild.file_limit:
+        if os.stat(zip_path).st_size >= interaction.guild.filesize_limit:
             await interaction.followup.send(
                 embed=embeds.make_error(self.bot, message=f"The render is too big to send."),
                 ephemeral=True,
