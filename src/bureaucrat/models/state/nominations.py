@@ -211,8 +211,9 @@ class Nominations (dotdict):
 
         required = state.seating.get_required_votes_for(seat.kind)
         
+        nominee_index = (state.seating.index(nominee) + 1) % len(state.seating.seats)
         nomination = Nomination(nominator=nominator, nominee=nominee, kind=kind, required=required, voters = [])
-        active_seats = [seat for seat in rotate(state.seating.seats, state.seating.index(nominator)) if not seat.removed]
+        active_seats = [seat for seat in rotate(state.seating.seats, nominee_index) if not seat.removed]
         nomination.voters = [Vote(id=seat.id, vote=None, private_vote=None, locked=None) for seat in active_seats]
         self.days[day].append(nomination)
         

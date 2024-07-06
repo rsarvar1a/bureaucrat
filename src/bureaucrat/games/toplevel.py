@@ -168,6 +168,10 @@ class TopLevel:
         if game is None:
             return
         
+        this_signup = await Signup.objects.get_or_none(game=game, member=interaction.user.id)
+        if this_signup:
+            return await self.send_ethereal(interaction, description=f"You are already signed up for this game!")
+
         this_user = await Participant.objects.get_or_none(game=game, member=interaction.user.id)
         if this_user:
             return await self.send_ethereal(interaction, description=f"You are already a {this_user.role.value} in this game.")

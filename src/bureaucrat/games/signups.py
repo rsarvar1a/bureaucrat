@@ -86,6 +86,10 @@ class Signups:
         if not await self.bot.ensure_privileged(interaction, game):
             return
 
+        this_signup = await Signup.objects.get_or_none(game=game, member=user.id)
+        if this_signup:
+            return await self.send_ethereal(interaction, description=f"{user.mention} is already signed up!")
+
         this_user = await Participant.objects.get_or_none(game=game, member=user.id)
         if this_user:
             return await self.send_ethereal(interaction, description=f"{user.mention} is already a {this_user.role.value} in this game.")
@@ -114,7 +118,7 @@ class Signups:
         if not await self.bot.ensure_privileged(interaction, game):
             return
     
-        this_signup = Signup.objects.get_or_none(game=game, member=user.id)
+        this_signup = await Signup.objects.get_or_none(game=game, member=user.id)
         if this_signup is None:
             return await self.send_ethereal(interaction, description=f"{user.mention} was not signed up.")
 

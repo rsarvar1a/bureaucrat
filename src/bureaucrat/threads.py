@@ -95,7 +95,7 @@ class Threads(commands.GroupCog, group_name="threads"):
         if not await self.bot.ensure_privileged(interaction, game):
             return
 
-        if await ManagedThread.objects.filter(game=game).count() > 0:
+        if await ManagedThread.objects.filter(game=game, type=ThreadType.Announcements).count() > 0:
             return await self.send_ethereal(interaction, description="You have already initialized threads in this game.")
         
         await interaction.response.defer(ephemeral=True)
