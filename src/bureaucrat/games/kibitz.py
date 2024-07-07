@@ -1,6 +1,6 @@
 from bureaucrat.models.games import Game, Kibitz, Participant, RoleType
 from bureaucrat.utility import checks, embeds
-from discord import ChannelType, Interaction, Member, Guild, Permissions, PermissionOverwrite, Role, TextChannel
+from discord import ChannelType, Interaction, Member, Guild, Permissions, PermissionOverwrite, Role, TextChannel, Thread
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
@@ -29,7 +29,7 @@ class Kibitzers:
             return None
         return kibitz
 
-    async def init(self, interaction: Interaction):
+    async def init(self, interaction: Interaction, reuse: Optional[bool]):
         """
         Initializes Kibitz for the active game.
         """
@@ -49,7 +49,17 @@ class Kibitzers:
 
         channel_id = game.channel
         channel: TextChannel = await interaction.guild.fetch_channel(channel_id)
-        thread = await channel.create_thread(name="KIBITZ", type=ChannelType.private_thread)
+
+        if reuse:
+            thread = interaction.channel
+            if not thread or not isinstance(thread, Thread):
+                await self.send_ethereal(interaction, description="You must be in a thread to use the `reuse` option.")
+            if not thread.is_private():
+                await self.send_ethereal(interaction, description=f"{thread.mention} is not private.")
+            await thread.edit(name="KIBITZ")
+        else:
+            thread = await channel.create_thread(name="KIBITZ", type=ChannelType.private_thread)
+
         role = await interaction.guild.create_role(name=f"kb:{channel.id}", mentionable=False)
         await channel.set_permissions(role, overwrite=PermissionOverwrite(manage_threads=True))
 
