@@ -268,6 +268,35 @@ class Nominations(commands.GroupCog, group_name="nominations"):
     @apc.command()
     @apc.autocomplete(nominee=existing_nominees)
     @apc.describe(nominee="The nomination to mark for death.")
+    async def default(self, interaction: Interaction, nominee: str):
+        """
+        Default all unlocked votes on a nomination to no.
+        """
+        if not await checks.in_guild(self.bot, interaction):
+            return
+
+        async with CONFIG.database.transaction():
+            game = await self.bot.ensure_active(interaction)
+            if game is None:
+                return
+
+            if not await self.bot.ensure_privileged(interaction, game):
+                return 
+            
+            state = State.load(game.state)
+
+            err = state.nominations.default(state=state, nominee=nominee)
+            if err:
+                return await self.send_ethereal(interaction, description=err)
+            
+            game.state = state.dump()
+            await game.update()
+        
+        await self._show(interaction, game, nominee, None)
+
+    @apc.command()
+    @apc.autocomplete(nominee=existing_nominees)
+    @apc.describe(nominee="The nomination to mark for death.")
     async def mark(self, interaction: Interaction, nominee: str):
         """
         Mark one of today's nominees for death.

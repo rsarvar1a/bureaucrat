@@ -180,6 +180,15 @@ class Nomination (dotdict):
         seat = state.seating.seats[state.seating.index(voter)]
         return votes[0].lock_vote(kind=self.kind, seat=seat, vote=vote)
 
+    def default(self, *, state: "State"):
+        """
+        Defaults all unset votes to null.
+        """
+        for vote in self.voters:
+            if not vote.locked:
+                seat = state.seating.seats[state.seating.index(vote.id)]
+                vote.lock_vote(kind=self.kind, seat=seat, vote=VoteResult.No)
+
 class Nominations (dotdict):
     """
     A manager for nomination and voting contexts.
@@ -309,4 +318,15 @@ class Nominations (dotdict):
             return "There is no such nomination."
         
         nomination.defense = defense
+        return None
+
+    def default(self, *, state: "State", nominee: str):
+        """
+        Defaults the vote on the corresponding nomination.
+        """
+        nomination = self.get_specific_nomination(state.moment.day, nominee)
+        if not nomination:
+            return "There is no such nomination."
+        
+        nomination.default(state=state)
         return None
