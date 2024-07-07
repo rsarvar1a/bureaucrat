@@ -167,7 +167,7 @@ class Games(commands.GroupCog, group_name="game", description="Commands for mana
 
     @kibitz.command(name="init")
     @apc.describe(reuse="If you use this command from an existing thread and set reuse to True, it will use the thread instead of making a new one.")
-    async def kibitz_init(self, interaction: Interaction, reuse=Optional[bool]):
+    async def kibitz_init(self, interaction: Interaction, reuse: Optional[bool]):
         """
         Create a kibitz thread and role.
         """
