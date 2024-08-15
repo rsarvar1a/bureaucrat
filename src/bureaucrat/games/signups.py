@@ -16,6 +16,9 @@ class Signups:
         self.bot: "Bureaucrat" = parent.bot
         self.parent = parent
     
+    async def followup_ethereal(self, interaction: Interaction, **kwargs):
+        await self.bot.followup_ethereal(interaction, title="Signups", **kwargs)
+
     async def send_ethereal(self, interaction: Interaction, **kwargs):
         await self.bot.send_ethereal(interaction, title="Signups", **kwargs)
 
@@ -64,7 +67,7 @@ class Signups:
         to_take = number if number else available
 
         if to_take > available:
-            return await self.send_ethereal(interaction, description="You are trying to take more signups than there are seats.")
+            return await self.followup_ethereal(interaction, description="You are trying to take more signups than there are seats.")
         
         signups = await Signup.objects.filter(game=game).order_by("id").limit(to_take).all()
         for signup in signups:
@@ -73,7 +76,7 @@ class Signups:
             await self.parent._roles.set_role(game, member, RoleType.PLAYER)
             await signup.delete()
         
-        await self.send_ethereal(interaction, description=f"Took {len(signups)} signups.")
+        await self.followup_ethereal(interaction, description=f"Took {len(signups)} signups.")
 
     async def add(self, interaction: Interaction, user: Member):
         if not await checks.in_guild(self.bot, interaction):
