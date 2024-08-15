@@ -67,8 +67,10 @@ class Signups:
         to_take = number if number else available
 
         if to_take > available:
-            return await self.followup_ethereal(interaction, description="You are trying to take more signups than there are seats.")
+            return await self.send_ethereal(interaction, description="You are trying to take more signups than there are seats.")
         
+        await interaction.response.defer(ephemeral=True)
+
         signups = await Signup.objects.filter(game=game).order_by("id").limit(to_take).all()
         for signup in signups:
             guild = interaction.guild
