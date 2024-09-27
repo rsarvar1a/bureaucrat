@@ -1880,13 +1880,13 @@ crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
 
 [[package]]
 name = "scriptmaker"
-version = "1.6.2"
+version = "1.6.4"
 description = "A Python library for producing custom scripts in Blood On The Clocktower."
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "scriptmaker-1.6.2-py3-none-any.whl", hash = "sha256:771e7c94045169bca181e9d48d2b13cb5f23b87ab259028bd081c17964d5e513"},
-    {file = "scriptmaker-1.6.2.tar.gz", hash = "sha256:b9876e8faedd6e7d9e8d6fb21b1ba42ac94498b877a5807298294c0e4c42e858"},
+    {file = "scriptmaker-1.6.4-py3-none-any.whl", hash = "sha256:65531e336bab2c787e0eaffda5a3decc3542ae572358fc11e3e01ea7edf5412d"},
+    {file = "scriptmaker-1.6.4.tar.gz", hash = "sha256:10a3144227dbaaa7a0dee8838b8d95304093a1f46d4a3968b223063bd2a6458a"},
 ]
 
 [package.dependencies]
