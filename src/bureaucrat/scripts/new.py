@@ -68,7 +68,7 @@ class NewScript:
             await Document.objects.create(doctype=doctype, script=script, url=url)
 
 
-class NewScriptModal(ui.Modal, title="Input your JSONs!"):
+class NewScriptModal(ui.Modal, title="Create a script!"):
     """
     A Discord modal that collects script and night order JSON inputs.
     Ths view also verifies that they are well-formed, but leaves content verification to scriptmaker.
@@ -77,6 +77,26 @@ class NewScriptModal(ui.Modal, title="Input your JSONs!"):
     def with_parent(self, *, parent):
         self.parent = parent
         return self
+
+    def handle_rich_form(self) -> None:
+        splits = [
+            str(self.parent.townsfolk_input.value).split(','),
+            str(self.parent.outsiders_input.value).split(','),
+            str(self.parent.minions_input.value).split(','),
+            str(self.parent.demons_input.value).split(','),
+            str(self.parent.travelers_input.value).split(','),
+            str(self.parent.fabled_input.value).split(',')
+        ]
+        characters = [x for xs in splits for x in xs]
+        
+        meta = {
+            'id': '_meta',
+            'name': self.parent.name_input.value,
+            "author": self.parent.author_input.value
+        }
+        
+        self.parent.script_json = [meta] + characters
+        self.parent.nights_json = None
 
     def handle_json_form(self) -> None:
         self.parent.script_json = json.loads(self.parent.script_input.value)
@@ -96,6 +116,8 @@ class NewScriptModal(ui.Modal, title="Input your JSONs!"):
 
     async def on_submit(self, interaction: Interaction) -> None:
         match self.parent.mode:
+            case NewScriptView.MODE_RICH:
+                self.handle_rich_form()
             case NewScriptView.MODE_JSON:
                 self.handle_json_form()
             case NewScriptView.MODE_URL:
@@ -124,6 +146,7 @@ class NewScriptView(ui.View):
     MODE_ATTACHMENT = 0
     MODE_URL = 1
     MODE_JSON = 2
+    MODE_RICH = 3
 
     def __init__(self, *, attachment: Attachment | None, bot: "Bureaucrat", timeout: float | None = 180):
         super().__init__(timeout=timeout)
@@ -136,24 +159,37 @@ class NewScriptView(ui.View):
 
         self.script_input = ui.TextInput(label="Script JSON", style=TextStyle.paragraph)
         self.nights_input = ui.TextInput(label="Nightorder JSON", style=TextStyle.paragraph, required=False)
+        
         self.script_url_input = ui.TextInput(label="Script URL", style=TextStyle.short)
         self.nights_url_input = ui.TextInput(label="Nightorder URL", style=TextStyle.short, required=False)
+        
+        self.name_input = ui.TextInput(label="Name", style=TextStyle.short)
+        self.townsfolk_input = ui.TextInput(label="Townsfolk", style=TextStyle.paragraph)
+        self.outsiders_input = ui.TextInput(label="Outsiders", style=TextStyle.paragraph)
+        self.minions_input = ui.TextInput(label="Minions", style=TextStyle.paragraph)
+        self.demons_input = ui.TextInput(label="Demons", style=TextStyle.paragraph)
+        self.travelers_input = ui.TextInput(label="Travelers", style=TextStyle.paragraph, required=False)
+        self.fabled_input = ui.TextInput(label="Fabled", style=TextStyle.paragraph, required=False)
 
         self.attachment = attachment
         if self.attachment:
             self.mode = NewScriptView.MODE_ATTACHMENT
         else:
-            self.mode = NewScriptView.MODE_JSON
-            self.next_mode = NewScriptView.MODE_URL
+            self.mode = NewScriptView.MODE_RICH
+            self.next_mode = NewScriptView.MODE_JSON
 
     @ui.button(label="toggle", style=ButtonStyle.red)
     async def toggle(self, interaction: Interaction, button: ui.Button):
         self.mode = self.next_mode
         match self.mode:
-            case NewScriptView.MODE_URL:
+            case NewScriptView.MODE_RICH:
                 self.toggle.label = "Switch to JSON"
-                self.get_jsons.label = "Enter URL"
+                self.get_jsons.label = "Choose characters"
                 self.next_mode = NewScriptView.MODE_JSON
+            case NewScriptView.MODE_URL:
+                self.toggle.label = "Switch to Easy Mode"
+                self.get_jsons.label = "Enter URL"
+                self.next_mode = NewScriptView.MODE_RICH
             case NewScriptView.MODE_JSON:
                 self.toggle.label = "Switch to URL"
                 self.get_jsons.label = "Enter JSON"
@@ -180,6 +216,12 @@ class NewScriptView(ui.View):
                 self.remove_item(self.get_jsons)
             case NewScriptView.MODE_JSON:
                 self.toggle.label = "Switch to URL"
+                self.toggle.disabled = False
+            case NewScriptView.MODE_RICH:
+                self.toggle.label = "Switch to JSON"
+                self.toggle.disabled = False
+            case NewScriptView.MODE_URL:
+                self.toggle.label = "Switch to Easy Mode"
                 self.toggle.disabled = False
 
     def enable_generation(self):
@@ -219,6 +261,18 @@ class NewScriptView(ui.View):
                     .with_parent(parent=self)
                     .add_item(self.script_url_input)
                     .add_item(self.nights_url_input)
+                )
+            case NewScriptView.MODE_RICH:
+                scripts_modal = (
+                    NewScriptModal()
+                    .with_parent(parent=self)
+                    .add_item(self.name_input)
+                    .add_item(self.townsfolk_input)
+                    .add_item(self.outsiders_input)
+                    .add_item(self.minions_input)
+                    .add_item(self.demons_input)
+                    .add_item(self.travelers_input)
+                    .add_item(self.demons_input)
                 )
 
         await interaction.response.send_modal(scripts_modal)
