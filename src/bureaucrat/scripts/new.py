@@ -80,12 +80,9 @@ class NewScriptModal(ui.Modal, title="Create a script!"):
 
     def handle_rich_form(self) -> None:
         splits = [
-            str(self.parent.townsfolk_input.value).split(','),
-            str(self.parent.outsiders_input.value).split(','),
-            str(self.parent.minions_input.value).split(','),
-            str(self.parent.demons_input.value).split(','),
-            str(self.parent.travelers_input.value).split(','),
-            str(self.parent.fabled_input.value).split(',')
+            self.parent.good_characters_input.value.split(','),
+            self.parent.evil_characters_input.value.split(','),
+            self.parent.extras_input.value.split(',')
         ]
         characters = [x for xs in splits for x in xs]
         
@@ -164,13 +161,11 @@ class NewScriptView(ui.View):
         self.nights_url_input = ui.TextInput(label="Nightorder URL", style=TextStyle.short, required=False)
         
         self.name_input = ui.TextInput(label="Name", style=TextStyle.short)
-        self.townsfolk_input = ui.TextInput(label="Townsfolk", style=TextStyle.paragraph)
-        self.outsiders_input = ui.TextInput(label="Outsiders", style=TextStyle.paragraph)
-        self.minions_input = ui.TextInput(label="Minions", style=TextStyle.paragraph)
-        self.demons_input = ui.TextInput(label="Demons", style=TextStyle.paragraph)
-        self.travelers_input = ui.TextInput(label="Travelers", style=TextStyle.paragraph, required=False)
-        self.fabled_input = ui.TextInput(label="Fabled", style=TextStyle.paragraph, required=False)
-
+        self.author_input = ui.TextInput(label="Author", style=TextStyle.short)
+        self.good_characters_input = ui.TextInput(label="Townsfolk & Outsiders", style=TextStyle.paragraph)
+        self.evil_characters_input = ui.TextInput(label="Minions & Demon(s)", style=TextStyle.paragraph)
+        self.extras_input = ui.TextInput(label="Travelers & Fabled", style=TextStyle.paragraph, required=False)
+        
         self.attachment = attachment
         if self.attachment:
             self.mode = NewScriptView.MODE_ATTACHMENT
@@ -267,12 +262,10 @@ class NewScriptView(ui.View):
                     NewScriptModal()
                     .with_parent(parent=self)
                     .add_item(self.name_input)
-                    .add_item(self.townsfolk_input)
-                    .add_item(self.outsiders_input)
-                    .add_item(self.minions_input)
-                    .add_item(self.demons_input)
-                    .add_item(self.travelers_input)
-                    .add_item(self.demons_input)
+                    .add_item(self.author_input)
+                    .add_item(self.good_characters_input)
+                    .add_item(self.evil_characters_input)
+                    .add_item(self.extras_input)              
                 )
 
         await interaction.response.send_modal(scripts_modal)
