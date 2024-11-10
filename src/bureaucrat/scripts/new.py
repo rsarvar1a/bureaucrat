@@ -243,7 +243,7 @@ class NewScriptView(ui.View):
 
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
-    @ui.button(label="Enter JSON", style=ButtonStyle.blurple)
+    @ui.button(label="Choose Characters", style=ButtonStyle.blurple)
     async def get_jsons(self, interaction: Interaction, button: ui.Button):
         match self.mode:
             case NewScriptView.MODE_JSON:
